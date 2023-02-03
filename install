@@ -1,0 +1,79 @@
+#!/bin/bash
+export DEBIAN_FRONTEND=noninteractive
+
+
+############################################
+# Install Xdebug
+############################################
+
+apt-get -qq install php7.4-xdebug
+apt-get -qq install php8.0-xdebug
+apt-get -qq install php8.1-xdebug
+apt-get -qq install php8.2-xdebug
+
+# Copy PHP profiles to PHP Xdebug versions
+mkdir /etc/php/7.4xdbg
+rsync -a /etc/php/7.4/ /etc/php/7.4xdbg
+./link_rename.sh /etc/php/7.4xdbg/fpm/conf.d /etc/php/7.4/ /etc/php/7.4xdbg/
+ln -s /etc/php/7.4xdbg/mods-available/xdebug.ini /etc/php/7.4xdbg/fpm/conf.d/20-xdebug.ini
+mkdir /etc/php/8.0xdbg
+rsync -a /etc/php/8.0/ /etc/php/8.0xdbg
+rm -rf /etc/php/8.0xdbg/fpm/pool.d
+./link_rename.sh /etc/php/8.0xdbg/fpm/conf.d /etc/php/8.0/ /etc/php/8.0xdbg/
+ln -s /etc/php/8.0xdbg/mods-available/xdebug.ini /etc/php/8.0xdbg/fpm/conf.d/20-xdebug.ini
+mkdir /etc/php/8.1xdbg
+rsync -al /etc/php/8.1/ /etc/php/8.1xdbg
+./link_rename.sh /etc/php/8.1xdbg/fpm/conf.d /etc/php/8.1/ /etc/php/8.1xdbg/
+ln -s /etc/php/8.1xdbg/mods-available/xdebug.ini /etc/php/8.1xdbg/fpm/conf.d/20-xdebug.ini
+mkdir /etc/php/8.2xdbg
+rsync -al /etc/php/8.2/ /etc/php/8.2xdbg
+./link_rename.sh /etc/php/8.2xdbg/fpm/conf.d /etc/php/8.2/ /etc/php/8.2xdbg/
+ln -s /etc/php/8.2xdbg/mods-available/xdebug.ini /etc/php/8.2xdbg/fpm/conf.d/20-xdebug.ini
+
+# Remove xdebug from plain PHP versions
+rm -f /etc/php/7.4/fpm/conf.d/20-xdebug.ini
+rm -f /etc/php/8.0/fpm/conf.d/20-xdebug.ini
+rm -f /etc/php/8.1/fpm/conf.d/20-xdebug.ini
+rm -f /etc/php/8.2/fpm/conf.d/20-xdebug.ini
+rsync -r ./src/etc/php/ /etc/php/
+rsync -r ./src/etc/init.d/ /etc/init.d/
+rsync -r ./src/lib/systemd/system/ /lib/systemd/system/
+
+# Allow execute
+chmod +x /etc/init.d/php7.4xdbg-fpm
+chmod +x /etc/init.d/php8.0xdbg-fpm
+chmod +x /etc/init.d/php8.1xdbg-fpm
+chmod +x /etc/init.d/php8.2xdbg-fpm
+
+# Add to auto start
+systemctl enable php7.4xdbg-fpm
+systemctl enable php8.0xdbg-fpm
+systemctl enable php8.1xdbg-fpm
+systemctl enable php8.2xdbg-fpm
+
+
+############################################
+# Install Open VSCode Server
+############################################
+
+cd /tmp
+architecture=""
+
+# Detect x64 or arm64 system
+case $(uname -m) in
+    i386)   architecture="linex-x64" ;;
+    i686)   architecture="linux-x64" ;;
+    x86_64) architecture="linux-x64" ;;
+    arm)    dpkg --print-architecture | grep -q "arm64" && architecture="linux-arm64" || architecture="linux-arm64" ;;
+esac
+export OPENVSCODE_SERVER_VERSION=1.74.2
+export OPENVSCODE_ARCH=$architecture
+wget https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v${OPENVSCODE_SERVER_VERSION}/openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
+tar -xzf openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
+mv openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH} /opt/openvscode-server
+rm openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
+
+# Install templates
+cd /usr/local/hestia/plugins/vscode
+rsync -r ./src/usr/local/hestia/ /usr/local/hestia/
+
