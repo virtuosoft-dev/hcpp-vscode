@@ -76,4 +76,3 @@ rm openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
 # Install templates
 cd /usr/local/hestia/plugins/vscode
 rsync -r ./src/usr/local/hestia/ /usr/local/hestia/
-
