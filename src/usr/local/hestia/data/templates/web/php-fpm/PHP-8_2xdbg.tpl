@@ -34,4 +34,5 @@ php_admin_value[max_execution_time]     = 300
 php_admin_value[smtp_port]              = 1025
 php_admin_value[sendmail_path]          = /usr/bin/catchmail --domain %domain%
 php_admin_value[SMTP]                   = 127.0.0.1
-php_admin_value[auto_prepend_file]      = /usr/local/hestia/web/plugins/code-gdn/src/prepend.php
+php_admin_value[auto_prepend_file]      = /usr/local/hestia/data/hcpp/prepend.php
+php_admin_value[auto_append_file]       = /usr/local/hestia/data/hcpp/append.php
