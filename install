@@ -70,9 +70,12 @@ export OPENVSCODE_SERVER_VERSION=1.76.0
 export OPENVSCODE_ARCH=$architecture
 wget https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v${OPENVSCODE_SERVER_VERSION}/openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
 tar -xzf openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
-mv openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH} /opt/openvscode-server
+mv openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH} /opt/vscode
 rm openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
 
 # Install templates
 cd /usr/local/hestia/plugins/vscode
 rsync -r ./src/usr/local/hestia/ /usr/local/hestia/
+
+# Notify installation has finished
+/usr/local/hestia/bin/v-add-user-notification admin "VSCode" "&#128309; VSCode plugin has finished installing."
