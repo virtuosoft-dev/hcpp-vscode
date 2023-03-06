@@ -1,1 +1,21 @@
 #!/bin/bash
+
+rm -rf /etc/php/7.4xdbg
+rm -rf /etc/php/8.0xdbg
+rm -rf /etc/php/8.1xdbg
+rm -rf /etc/php/8.2xdbg
+
+rm /etc/init.d/php7.4xdbg-fpm
+rm /etc/init.d/php8.0xdbg-fpm
+rm /etc/init.d/php8.1xdbg-fpm
+rm /etc/init.d/php8.2xdbg-fpm
+
+rm /lib/systemd/system/php7.4xdbg-fpm.service
+rm /lib/systemd/system/php8.0xdbg-fpm.service
+rm /lib/systemd/system/php8.1xdbg-fpm.service
+rm /lib/systemd/system/php8.2xdbg-fpm.service
+
+rm /usr/local/hestia/data/tempaltes/web/php-fpm/7.4xdbg.tpl
+rm /usr/local/hestia/data/tempaltes/web/php-fpm/8.0xdbg.tpl
+rm /usr/local/hestia/data/tempaltes/web/php-fpm/8.1xdbg.tpl
+rm /usr/local/hestia/data/tempaltes/web/php-fpm/8.2xdbg.tpl
