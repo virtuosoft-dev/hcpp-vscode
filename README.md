@@ -21,3 +21,10 @@ git clone https://github.com/steveorevo/hestiacp-vscode vscode
 
 Note: It is important that the plugin folder name is `vscode`.
 
+Be sure to logout and login again to your Hestia Control Panel as the admin user or, as admin, visit Server (gear icon) -> Configure -> Plugins -> Save; the plugin will immediately start installing VSCode server depedencies in the background. A notification will appear under the admin user account indicating *"VSCOde plugin has finished installing"* when complete. This may take awhile before the options appear in Hestia. You can force manual installation via root level SSH:
+
+```
+sudo -s
+cd /usr/local/hestia/plugins/vscode
+./install
+```
