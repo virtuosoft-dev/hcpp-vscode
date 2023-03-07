@@ -80,6 +80,24 @@ if ( ! class_exists( 'VSCode') ) {
                 $content
             );
             file_put_contents( $conf, $content );
+
+            // Create the NGINX configuration reference.
+            $link = "/etc/nginx/conf.d/domains/vscode-$user.$hostname.conf";
+            if ( ! is_link( $link ) ) {
+                symlink( "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf", $link );
+            }
+        }
+
+        // Delete the NGINX configuration reference when the user is deleted.
+        public function priv_delete_user( $args ) {
+            global $hcpp;
+            $user = $args[0];
+            $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
+            $link = "/etc/nginx/conf.d/domains/vscode-$user.$hostname.conf";
+            if ( is_link( $link ) ) {
+                unlink( $link );
+            }
+            return $args;
         }
 
         // Configure VSCode for the given domain.
