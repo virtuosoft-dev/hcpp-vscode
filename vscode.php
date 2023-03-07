@@ -69,7 +69,7 @@ if ( ! class_exists( 'VSCode') ) {
             file_put_contents( $conf, $content );
 
             // Allocate a port for the VSCode Server instance.
-            $hcpp->allocate_port( $user, "vscode", "vscode-$user.$hostname" );
+            $hcpp->allocate_port( "vscode", $user, "vscode-$user.$hostname" );
 
             // Create the nginx.forcessl.conf_ports file.
             $conf = "/home/$user/conf/web/vscode-$user.$hostname/nginx.forcessl.conf_ports";
