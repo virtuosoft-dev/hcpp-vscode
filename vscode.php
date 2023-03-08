@@ -18,6 +18,7 @@ if ( ! class_exists( 'VSCode') ) {
             global $hcpp;
             $hcpp->vscode = $this;
             $hcpp->add_action( 'priv_change_web_domain_backend_tpl', [ $this, 'priv_change_web_domain_backend_tpl' ] );
+            $hcpp->add_action( 'invoke_plugin', [ $this, 'invoke_plugin' ] );
             $hcpp->add_action( 'render_page', [ $this, 'render_page' ] );
         }
 
@@ -31,6 +32,14 @@ if ( ! class_exists( 'VSCode') ) {
             $this->setup( $user );           
             $this->configure( $user, $domain );
             return $data;
+        }
+
+        // Return requests for the VSCode Server token for the given user.
+        public function invoke_plugin( $args ) {
+            global $hcpp;
+            $hcpp->log( "vscode->invoke_plugn()");
+            $hcpp->log( $args );
+            return $args;
         }
 
         // Setup the VSCode Server instance for the user.
@@ -130,7 +139,7 @@ if ( ! class_exists( 'VSCode') ) {
             $hostname = explode( ".", trim( shell_exec( "hostname -f" ) ) );
             array_shift( $hostname );
             $hostname = implode( ".", $hostname );
-            $token = trim( shell_exec( "sudo /usr/bin/cat /home/$user/.openvscode-server/data/token" ) );
+            $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
             $content = $args['content'];
             $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
             $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
