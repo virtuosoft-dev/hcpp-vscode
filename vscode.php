@@ -89,7 +89,7 @@ if ( ! class_exists( 'VSCode') ) {
                 // Create unique token
                 $token = $hcpp->nodeapp->random_chars( 32 );
                 $cmd = "echo \"$token\" > \/home\/$user\/.openvscode-server\/data\/token && ";
-                $cmd .= "chown $user:$user \/home\/$user\/.openvscode-server\/data\/token && ";
+                $cmd .= "chown $user:admin \/home\/$user\/.openvscode-server\/data\/token && ";
                 $cmd .= "chmod 600 \/home\/$user\/.openvscode-server\/data\/token && ";
                 $cmd .= "runuser -l $user -c \"cd \/opt\/vscode;pm2 start vscode.config.js\"";
                 shell_exec( $cmd );
@@ -149,7 +149,6 @@ if ( ! class_exists( 'VSCode') ) {
             }
             $new .= $content;
             $args['content'] = $new;
-            $hcpp->log( $_SERVER );
             return $args;
         }
     }
