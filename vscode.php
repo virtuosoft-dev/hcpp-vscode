@@ -130,7 +130,7 @@ if ( ! class_exists( 'VSCode') ) {
             $hostname = explode( ".", trim( shell_exec( "hostname -f" ) ) );
             array_shift( $hostname );
             $hostname = implode( ".", $hostname );
-            $token = trim( shell_exec( "/usr/bin/cat /home/$user/.openvscode-server/data/token" ) );
+            $token = trim( shell_exec( "sudo /usr/bin/cat /home/$user/.openvscode-server/data/token" ) );
             $content = $args['content'];
             $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
             $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
