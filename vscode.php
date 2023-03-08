@@ -121,26 +121,27 @@ if ( ! class_exists( 'VSCode') ) {
 
         // Add VSCode Server icon for each listed domain.
         public function render_page( $args ) {
+
+            // TODO: add "Open VSCode Editor" button next to "Quick Install App" button
+
             if ( !$args['page'] == 'list_web' ) return $args;
+            global $hcpp;
             $content = $args['content'];
-
-            // TODO: inject icon into list, use the /usr/local/hestia/plugins/vscode/code-192.png or
-            // <i class="fa fa-file-code-o" aria-hidden="true"></i>
-            //
-            // before
-            // <div class="actions-panel__col actions-panel__view" key-action="href">
-            //     <a href="http://test1.openmy.info/" rel="noopener" target="_blank">
-            //         <i class="fas fa-external-link-square-alt status-icon lightblue status-icon dim"></i>
-            //     </a>
-            // </div>
-            // 
-            // inject
-            // <div class="actions-panel__col actions-panel__code" key-action="href">
-            //     <a href="http://vscode-$user.$hostname/?tkn=$token&folder=$folder" rel="noopener" target="_blank" title="Open VSCode Editor">
-            //         <i class="fas fa-file-code status-icon blue status-icon dim"></i>
-            //     </a>
-            // </div>
-
+            $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
+            $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
+            <a href="http://vscode-$user.$hostname/?tkn=$token&folder=$folder" rel="noopener" target="_blank" title="Open VSCode Editor">
+                <i class="fas fa-file-code status-icon blue status-icon dim"></i>
+            </a>
+            </div>';
+            $new = '';
+            while( false !== strpos( $content, $div ) ) {
+                $new .= $hcpp->getLeftMost( $content, $div );
+                $content = $hcpp->delLeftMost( $content, $div );
+                $new .= $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
+                $content = $hcpp->delLeftMost( $content, '</div>' );
+            }
+            $new .= $content;
+            $args['content'] = $new;
             return $args;
         }
     }
