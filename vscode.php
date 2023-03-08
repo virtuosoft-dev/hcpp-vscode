@@ -126,21 +126,25 @@ if ( ! class_exists( 'VSCode') ) {
 
             if ( !$args['page'] == 'list_web' ) return $args;
             global $hcpp;
+            $user = trim( $args['user'], "'");
             $hostname = explode( ".", trim( shell_exec( "hostname -f" ) ) );
             array_shift( $hostname );
             $hostname = implode( ".", $hostname );
-            $user = trim( $args['user'], "'");
+            $token = file_get_contents( "/home/$user/.openvscode-server/data/token" );
             $content = $args['content'];
             $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
             $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
-            <a href="http://vscode-' . $user . '.' . $hostname . '/?tkn=$token&folder=$folder" rel="noopener" target="_blank" title="Open VSCode Editor">
+            <a href="http://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token .'&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
                 <i class="fas fa-file-code status-icon blue status-icon dim"></i>
             </a></div>&nbsp;';
             $new = '';
             while( false !== strpos( $content, $div ) ) {
                 $new .= $hcpp->getLeftMost( $content, $div );
+                $domain = $hcpp->getRightMost( $new, 'name="' );
+                $domain = $hcpp->getLeftMost( $domain, '"' );
+                $folder = "/home/$user/web/$domain/public_html";
                 $content = $hcpp->delLeftMost( $content, $div );
-                $new .= $code . $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
+                $new .= str_replace( '%folder%', $folder, $code ) . $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
                 $content = $hcpp->delLeftMost( $content, '</div>' );
             }
             $new .= $content;
