@@ -18,6 +18,7 @@ if ( ! class_exists( 'VSCode') ) {
             global $hcpp;
             $hcpp->vscode = $this;
             $hcpp->add_action( 'priv_change_web_domain_backend_tpl', [ $this, 'priv_change_web_domain_backend_tpl' ] );
+            $hcpp->add_action( 'render_page', [ $this, 'render_page' ] );
         }
 
         // Trigger setup and configuration when xdgb is selected.
@@ -29,11 +30,6 @@ if ( ! class_exists( 'VSCode') ) {
             if ( strpos( $tpl, 'xdbg' ) === false ) return $data;
             $this->setup( $user );           
             $this->configure( $user, $domain );
-            // 19:16:51.99 [
-            //     "homestead",
-            //     "test1.openmy.info",
-            //     "PHP-8_2xdbg"
-            // ]
             return $data;
         }
 
@@ -86,9 +82,21 @@ if ( ! class_exists( 'VSCode') ) {
             if ( ! is_link( $link ) ) {
                 symlink( "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf", $link );
             }
+
+            // Start the VSCode Server instance
+            if ( trim( shell_exec( "rununser -l $user -c \"cd \/opt\/vscode;pm2 pid vscode-$user.$hostname\"" ) ) === '' ) {
+
+                // Create unique token
+                $token = $hcpp->nodeapp->random_chars( 32 );
+                $cmd = "echo \"$token\" > \/home\/$user\/.openvscode-server\/data\/token && ";
+                $cmd .= "chown $user:$user \/home\/$user\/.openvscode-server\/data\/token && ";
+                $cmd .= "chmod 600 \/home\/$user\/.openvscode-server\/data\/token && ";
+                $cmd .= "runuser -l $user -c \"cd \/opt\/vscode;pm2 start vscode.config.js\"";
+                shell_exec( $cmd );
+            }
         }
 
-        // Delete the NGINX configuration reference when the user is deleted.
+        // Delete the NGINX configuration reference and server when the user is deleted.
         public function priv_delete_user( $args ) {
             global $hcpp;
             $user = $args[0];
@@ -97,12 +105,43 @@ if ( ! class_exists( 'VSCode') ) {
             if ( is_link( $link ) ) {
                 unlink( $link );
             }
+
+            // Delete the VSCode Server instance
+            $cmd = "runuser -l $user -c \"cd \/opt\/vscode;pm2 delete vscode-$user.$hostname\"";
+            shell_exec( $cmd );
             return $args;
         }
 
         // Configure VSCode for the given domain.
         public function configure( $user, $domain ) {
 
+            // TODO: write .vscode/settings.json and .vscode/launch.json
+
+        }
+
+        // Add VSCode Server icon for each listed domain.
+        public function render_page( $args ) {
+            if ( !$args['page'] == 'list_web' ) return $args;
+            $content = $args['content'];
+
+            // TODO: inject icon into list, use the /usr/local/hestia/plugins/vscode/code-192.png or
+            // <i class="fa fa-file-code-o" aria-hidden="true"></i>
+            //
+            // before
+            // <div class="actions-panel__col actions-panel__view" key-action="href">
+            //     <a href="http://test1.openmy.info/" rel="noopener" target="_blank">
+            //         <i class="fas fa-external-link-square-alt status-icon lightblue status-icon dim"></i>
+            //     </a>
+            // </div>
+            // 
+            // inject
+            // <div class="actions-panel__col actions-panel__code" key-action="href">
+            //     <a href="http://vscode-$user.$hostname/?tkn=$token&folder=$folder" rel="noopener" target="_blank" title="Open VSCode Editor">
+            //         <i class="fas fa-file-code status-icon blue status-icon dim"></i>
+            //     </a>
+            // </div>
+
+            return $args;
         }
     }
     new VSCode();
