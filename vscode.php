@@ -137,7 +137,7 @@ if ( ! class_exists( 'VSCode') ) {
             while( false !== strpos( $content, $div ) ) {
                 $new .= $hcpp->getLeftMost( $content, $div );
                 $content = $hcpp->delLeftMost( $content, $div );
-                $new .= $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
+                $new .= $code . $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
                 $content = $hcpp->delLeftMost( $content, '</div>' );
             }
             $new .= $content;
