@@ -140,7 +140,7 @@ if ( ! class_exists( 'VSCode') ) {
             $new = '';
             while( false !== strpos( $content, $div ) ) {
                 $new .= $hcpp->getLeftMost( $content, $div );
-                $domain = $hcpp->getRightMost( $new, 'name="' );
+                $domain = $hcpp->getRightMost( $new, 'sort-name="' );
                 $domain = $hcpp->getLeftMost( $domain, '"' );
                 $folder = "/home/$user/web/$domain/public_html";
                 $content = $hcpp->delLeftMost( $content, $div );
