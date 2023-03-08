@@ -129,10 +129,11 @@ if ( ! class_exists( 'VSCode') ) {
             $hostname = explode( ".", trim( shell_exec( "hostname -f" ) ) );
             array_shift( $hostname );
             $hostname = implode( ".", $hostname );
+            $user = trime( $args['user'], "'");
             $content = $args['content'];
             $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
             $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
-            <a href="http://vscode-' . $args['user'] . '.' . $hostname . '/?tkn=$token&folder=$folder" rel="noopener" target="_blank" title="Open VSCode Editor">
+            <a href="http://vscode-' . $user . '.' . $hostname . '/?tkn=$token&folder=$folder" rel="noopener" target="_blank" title="Open VSCode Editor">
                 <i class="fas fa-file-code status-icon blue status-icon dim"></i>
             </a></div>&nbsp;';
             $new = '';
