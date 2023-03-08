@@ -77,5 +77,8 @@ rm openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
 cd /usr/local/hestia/plugins/vscode
 rsync -r ./src/usr/local/hestia/ /usr/local/hestia/
 
+# Install pm2 controll of Open VSCode Server
+rsync -r ./src/opt/vscode/ /opt/vscode/
+
 # Notify installation has finished
 /usr/local/hestia/bin/v-add-user-notification admin "VSCode" "&#128309; VSCode plugin has finished installing."
