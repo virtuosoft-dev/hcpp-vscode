@@ -131,7 +131,7 @@ if ( ! class_exists( 'VSCode') ) {
             $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
             <a href="http://vscode-$user.$hostname/?tkn=$token&folder=$folder" rel="noopener" target="_blank" title="Open VSCode Editor">
                 <i class="fas fa-file-code status-icon blue status-icon dim"></i>
-            </a> </div>';
+            </a>&nbsp;</div>&nbsp;';
             $new = '';
             while( false !== strpos( $content, $div ) ) {
                 $new .= $hcpp->getLeftMost( $content, $div );
