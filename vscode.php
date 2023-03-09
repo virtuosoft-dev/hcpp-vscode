@@ -155,7 +155,7 @@ if ( ! class_exists( 'VSCode') ) {
             $code .= '</i> Open VSCode Editor</a>';
 
             // Inject the button into the page's toolbar buttonstrip
-            $quick = '<i class="fas fa-magic status-icon blue"></i>';
+            $quick = '"fas fa-magic status-icon blue';
             $before = $hcpp->getLeftMost( $content, $quick ) . $quick;
             $after = $hcpp->delLeftMost( $content, $quick );
             $before .= $hcpp->getLeftMost( $after, '</a>' ) . '</a>';
