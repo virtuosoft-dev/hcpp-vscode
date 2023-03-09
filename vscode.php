@@ -128,25 +128,44 @@ if ( ! class_exists( 'VSCode') ) {
 
         }
 
-        // Add VSCode Server icon for each listed domain.
+        // Add VSCode Server icon to our web domain list and domain edit pages.
         public function render_page( $args ) {
+            if ( $args['page'] == 'list_web' ) {
+                $args = $this->render_list_web( $args );
+            }
+            if ( $args['page'] == 'edit_web' ) {
+                $args = $this->render_edit_web( $args );
+            }
+            return $args;
+       }
 
-            // TODO: add "Open VSCode Editor" button next to "Quick Install App" button
+       // Add VSCode Server icon to our web domain edit page.
+       public function render_edit_web( $args ) {
+            global $hcpp;
+            $user = trim( $args['user'], "'" );
+            $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
+            $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
+            
+            return $args;
+       }
 
-            if ( !$args['page'] == 'list_web' ) return $args;
+       // Add VSCode Server icon to our web domain list page.
+       public function render_list_web( $args ) {
             global $hcpp;
             $user = trim( $args['user'], "'");
-            $hostname = explode( ".", trim( shell_exec( "hostname -f" ) ) );
-            array_shift( $hostname );
-            $hostname = implode( ".", $hostname );
+            $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
             $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
             $content = $args['content'];
+
+            // Create blue code icon before pencil/edit icon
             $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
             $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
             <a href="http://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token .'&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
                 <i class="fas fa-file-code status-icon blue status-icon dim"></i>
             </a></div>&nbsp;';
             $new = '';
+
+            // Inject the code icon for each domain
             while( false !== strpos( $content, $div ) ) {
                 $new .= $hcpp->getLeftMost( $content, $div );
                 $domain = $hcpp->getRightMost( $new, 'sort-name="' );
@@ -159,7 +178,7 @@ if ( ! class_exists( 'VSCode') ) {
             $new .= $content;
             $args['content'] = $new;
             return $args;
-        }
+       }
     }
     new VSCode();
 }
