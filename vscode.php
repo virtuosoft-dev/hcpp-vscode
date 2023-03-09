@@ -150,8 +150,8 @@ if ( ! class_exists( 'VSCode') ) {
 
             // Create blue code icon button to appear before Quick Installer button
             $code = '<a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token . '&folder=';
-            $code .= 'https://vscode-' . $user . '.' . $hostname . '/home/' . $user . '/web/' . $domain;
-            $code .= '" class="ui-button cancel" dir="ltr"><i class="fas fa-file-code status-icon blue">';
+            $code .= 'https://vscode-' . $user . '.' . $hostname . '/home/' . $user . '/web/' . $domain . '" ';
+            $code .= 'target="_blank" class="ui-button cancel" dir="ltr"><i class="fas fa-file-code status-icon blue">';
             $code .= '</i> Open VSCode Editor</a>';
 
             // Inject the button into the page's toolbar buttonstrip
