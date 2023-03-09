@@ -145,7 +145,7 @@ if ( ! class_exists( 'VSCode') ) {
             $user = trim( $args['user'], "'" );
             $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
             $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
-            
+
             return $args;
        }
 
@@ -170,7 +170,7 @@ if ( ! class_exists( 'VSCode') ) {
                 $new .= $hcpp->getLeftMost( $content, $div );
                 $domain = $hcpp->getRightMost( $new, 'sort-name="' );
                 $domain = $hcpp->getLeftMost( $domain, '"' );
-                $folder = "/home/$user/web/$domain/public_html";
+                $folder = "/home/$user/web/$domain";
                 $content = $hcpp->delLeftMost( $content, $div );
                 $new .= str_replace( '%folder%', $folder, $code ) . $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
                 $content = $hcpp->delLeftMost( $content, '</div>' );
