@@ -145,7 +145,24 @@ if ( ! class_exists( 'VSCode') ) {
             $user = trim( $args['user'], "'" );
             $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
             $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
+            $domain = $_GET['domain'];
+            $content = $args['content'];
 
+            // Create blue code icon button to appear before Quick Installer button
+            $code = '<a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token . '&folder=';
+            $code .= 'https://vscode-' . $user . '.' . $hostname . '/home/' . $user . '/web/' . $domain;
+            $code .= '" class="ui-button cancel" dir="ltr"><i class="fas fa-file-code status-icon blue">';
+            $code .= '</i> Open VSCode Editor</a>';
+
+            // Inject the button into the page's toolbar buttonstrip
+            $quick = '<i class="fas fa-magic status-icon blue"></i>';
+            $before = $hcpp->getLeftMost( $content, $quick ) . $quick;
+            $after = $hcpp->delLeftMost( $content, $quick );
+            $before .= $hcpp->getLeftMost( $after, '</a>' ) . '</a>';
+            $after = '<a href' . $hcpp->getRightMost( $before, '<a href' ) . $after;
+            $before = $hcpp->delRightMost( $before, '<a href' );
+            $content = $before . $code . $after;
+            $args['content'] = $content;
             return $args;
        }
 
@@ -160,7 +177,7 @@ if ( ! class_exists( 'VSCode') ) {
             // Create blue code icon before pencil/edit icon
             $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
             $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
-            <a href="http://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token .'&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
+            <a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token .'&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
                 <i class="fas fa-file-code status-icon blue status-icon dim"></i>
             </a></div>&nbsp;';
             $new = '';
