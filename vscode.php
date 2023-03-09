@@ -158,6 +158,8 @@ if ( ! class_exists( 'VSCode') ) {
             $quick = '"fas fa-magic status-icon blue';
             $before = $hcpp->getLeftMost( $content, $quick );
             $after = $quick . $hcpp->delLeftMost( $content, $quick );
+            $after = '<a href' . $hcpp->getRightMost( $before, '<a href' ) . $after;
+            $before = $hcpp->delRightMost( $before, '<a href' );
             // $before .= $hcpp->getLeftMost( $after, '</a>' ) . '</a>';
             // $after = '<a href' . $hcpp->getRightMost( $before, '<a href' ) . $after;
             // $before = $hcpp->delRightMost( $before, '<a href' );
