@@ -160,10 +160,7 @@ if ( ! class_exists( 'VSCode') ) {
             $after = $quick . $hcpp->delLeftMost( $content, $quick );
             $after = '<a href' . $hcpp->getRightMost( $before, '<a href' ) . $after;
             $before = $hcpp->delRightMost( $before, '<a href' );
-            // $before .= $hcpp->getLeftMost( $after, '</a>' ) . '</a>';
-            // $after = '<a href' . $hcpp->getRightMost( $before, '<a href' ) . $after;
-            // $before = $hcpp->delRightMost( $before, '<a href' );
-            $content = $before . $after;
+            $content = $before . $code . $after;
             $args['content'] = $content;
             return $args;
        }
