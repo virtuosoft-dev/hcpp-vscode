@@ -36,9 +36,9 @@ if ( ! class_exists( 'VSCode') ) {
 
         // Return requests for the VSCode Server token for the given user.
         public function invoke_plugin( $args ) {
-            global $hcpp;
-            $hcpp->log( "vscode->invoke_plugn()");
-            $hcpp->log( $args );
+            if ( $args[0] !== 'vscode_get_token' ) return $args;
+            $user = $args[1];
+            echo file_get_contents( "/home/$user/.openvscode-server/data/token" );
             return $args;
         }
 
