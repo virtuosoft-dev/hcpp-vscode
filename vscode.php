@@ -105,8 +105,8 @@ if ( ! class_exists( 'VSCode') ) {
                 symlink( "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf", $link );
             }
 
-            // Start the VSCode Server instanc
-            if ( trim( shell_exec( "pm2=$(which pm2);rununser -l $user -c \"cd \/opt\/vscode;\$pm2 pid vscode-$user.$hostname\"" ) ) === '' ) {
+            // Start the VSCode Server instance
+            if ( trim( shell_exec( "pm2=$(which pm2);runuser -l $user -c \"cd \/opt\/vscode;\$pm2 pid vscode-$user.$hostname\"" ) ) === '' ) {
                 $cmd = "pm2=$(which pm2);runuser -l $user -c \"cd \/opt\/vscode;\$pm2 start vscode.config.js\"";
                 shell_exec( $cmd );
             }else{
