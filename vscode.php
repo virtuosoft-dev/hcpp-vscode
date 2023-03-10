@@ -61,7 +61,7 @@ if ( ! class_exists( 'VSCode') ) {
             global $hcpp;
             $hcpp->log( 'vscode->setup(' . $user . ')' );
             $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
-            $pm2 = trim( shell_exec( 'which pm2' ) );
+            $pm2 = trim( shell_exec( 'find /opt/nvm/versions -name pm2 -type f -perm /a+x -print -quit' ) );
             $hcpp->log( 'pm2: ' . $pm2 );
             $conf = "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf";
 
