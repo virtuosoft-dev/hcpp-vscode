@@ -61,7 +61,6 @@ if ( ! class_exists( 'VSCode') ) {
             global $hcpp;
             $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
             $conf = "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf";
-            if ( file_exists( $conf ) ) return;
 
             // Create the configuration folder
             if ( ! is_dir( "/home/$user/conf/web/vscode-$user.$hostname" ) ) {
@@ -100,7 +99,7 @@ if ( ! class_exists( 'VSCode') ) {
             );
             file_put_contents( $conf, $content );
 
-            // Create the NGINX configuration reference.
+            // Create the NGINX configuration symbolic link.
             $link = "/etc/nginx/conf.d/domains/vscode-$user.$hostname.conf";
             if ( ! is_link( $link ) ) {
                 symlink( "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf", $link );
@@ -108,15 +107,21 @@ if ( ! class_exists( 'VSCode') ) {
 
             // Start the VSCode Server instance
             if ( trim( shell_exec( "rununser -l $user -c \"cd \/opt\/vscode;pm2 pid vscode-$user.$hostname\"" ) ) === '' ) {
+                $cmd = "runuser -l $user -c \"cd \/opt\/vscode;pm2 start vscode.config.js\"";
+                shell_exec( $cmd );
+            }else{
+                $this->update_token( $user );
+            }
+        }
 
-                // Create unique token
+        // Update the VSCode Server access token; this invokes watch's restart.
+        public function update_token( $user ) {
+                global $hcpp;
                 $token = $hcpp->nodeapp->random_chars( 32 );
                 $cmd = "echo \"$token\" > \/home\/$user\/.openvscode-server\/data\/token && ";
-                $cmd .= "chown $user:admin \/home\/$user\/.openvscode-server\/data\/token && ";
-                $cmd .= "chmod 600 \/home\/$user\/.openvscode-server\/data\/token && ";
-                $cmd .= "runuser -l $user -c \"cd \/opt\/vscode;pm2 start vscode.config.js\"";
+                $cmd .= "chown $user:$user \/home\/$user\/.openvscode-server\/data\/token && ";
+                $cmd .= "chmod 600 \/home\/$user\/.openvscode-server\/data\/token";
                 shell_exec( $cmd );
-            }
         }
 
         // Delete the NGINX configuration reference and server when the user is deleted.
