@@ -62,6 +62,7 @@ if ( ! class_exists( 'VSCode') ) {
             $hcpp->log( 'vscode->setup(' . $user . ')' );
             $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
             $pm2 = trim( shell_exec( 'which pm2' ) );
+            $hcpp->log( 'pm2: ' . $pm2 );
             $conf = "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf";
 
             // Create the configuration folder
