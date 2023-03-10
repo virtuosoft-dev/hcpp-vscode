@@ -65,6 +65,10 @@ if ( ! class_exists( 'VSCode') ) {
             // Create the configuration folder
             if ( ! is_dir( "/home/$user/conf/web/vscode-$user.$hostname" ) ) {
                 mkdir( "/home/$user/conf/web/vscode-$user.$hostname" );
+
+                // Run pm2 first time
+                $cmd = "runuser -l $user -c \"cd /home/$user && source /opt/nvm/nvm.sh ; pm2\"";
+                shell_exec( $cmd );
             }
 
             // Get user account first IP address.
