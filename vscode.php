@@ -112,7 +112,7 @@ if ( ! class_exists( 'VSCode') ) {
             if ( trim( shell_exec( $cmd ) ) === '' ) {
                 $cmd = "pm2=$(which pm2);runuser -l $user -c \"cd /opt/vscode;\$pm2 start vscode.config.js\"";
                 $hcpp->log( $cmd );
-                shell_exec( $cmd );
+                $hcpp->log( shell_exec( $cmd ) );
             }else{
                 $this->update_token( $user );
             }
