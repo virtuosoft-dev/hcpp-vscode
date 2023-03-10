@@ -34,8 +34,6 @@ module.exports = {
         details.ignore_watch = [];
         details.watch_delay = 5000;
         details.restart_delay = 5000;
-
-        console.log(details);
         return [details];
     })()
 }

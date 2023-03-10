@@ -17,21 +17,35 @@ if ( ! class_exists( 'VSCode') ) {
         public function __construct() {
             global $hcpp;
             $hcpp->vscode = $this;
-            $hcpp->add_action( 'priv_change_web_domain_backend_tpl', [ $this, 'priv_change_web_domain_backend_tpl' ] );
+            $hcpp->add_action( 'priv_unsuspend_domain', [ $this, 'priv_unsuspend_domain' ] );
+            $hcpp->add_action( 'priv_add_web_domain', [ $this, 'priv_add_web_domain' ] );
+            $hcpp->add_action( 'priv_delete_user', [ $this, 'priv_delete_user' ] );
             $hcpp->add_action( 'invoke_plugin', [ $this, 'invoke_plugin' ] );
             $hcpp->add_action( 'render_page', [ $this, 'render_page' ] );
+            $hcpp->add_action( 'vscode_client_script', [ $this, 'vscode_client_script' ] );
+            if ( isset( $_GET['client'] ) && $_GET['client'] == 'vscode' ) {
+                echo $hcpp->do_action( 'vscode_client_script', '' );
+            }
         }
 
-        // Trigger setup and configuration when xdgb is selected.
-        public function priv_change_web_domain_backend_tpl( $data ) {
+        // Trigger setup and configuration when domain is created.
+        public function priv_add_web_domain( $args ) {
             global $hcpp;
-            $user = $data[0];
-            $domain = $data[1];
-            $tpl = $data[2];
-            if ( strpos( $tpl, 'xdbg' ) === false ) return $data;
+            $user = $args[0];
+            $domain = $args[1];
             $this->setup( $user );           
             $this->configure( $user, $domain );
-            return $data;
+            return $args;
+        }
+
+        // On domain unsuspend, re-run setup and configuration.
+        public function priv_unsuspend_domain( $args ) {
+            global $hcpp;
+            $user = $args[0];
+            $domain = $args[1];
+            $this->setup( $user );           
+            $this->configure( $user, $domain );
+            return $args;
         }
 
         // Return requests for the VSCode Server token for the given user.
@@ -194,6 +208,11 @@ if ( ! class_exists( 'VSCode') ) {
             $new .= $content;
             $args['content'] = $new;
             return $args;
+       }
+
+       // Inject our custom VSCode client script
+       public function vscode_client_script( $content ) {
+            return "alert('Hello from vscode_client_script!');";
        }
     }
     new VSCode();

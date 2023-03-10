@@ -6,3 +6,9 @@ location / {
     proxy_set_header Upgrade $http_upgrade;
     proxy_set_header Connection "upgrade";
 }
+
+location /vscode {
+    proxy_ssl_verify off;
+    proxy_pass http://127.0.0.1:8083/pluginable.php?client=vscode;
+    proxy_http_version 1.1;
+}
