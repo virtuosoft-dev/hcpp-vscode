@@ -59,10 +59,8 @@ if ( ! class_exists( 'VSCode') ) {
         // Setup the VSCode Server instance for the user.
         public function setup( $user ) {
             global $hcpp;
-            $hcpp->log( 'vscode->setup(' . $user . ')' );
             $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
             $pm2 = trim( shell_exec( 'find /opt/nvm/versions -name pm2 -type f -perm /a+x -print -quit' ) );
-            $hcpp->log( 'pm2: ' . $pm2 );
             $conf = "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf";
 
             // Create the configuration folder
@@ -110,11 +108,9 @@ if ( ! class_exists( 'VSCode') ) {
 
             // Start the VSCode Server instance
             $cmd = "runuser -l $user -c \"cd /opt/vscode;$pm2 pid vscode-$user.$hostname\"";
-            $hcpp->log( $cmd );
             if ( trim( shell_exec( $cmd ) ) === '' ) {
                 $cmd = "runuser -l $user -c \"cd /opt/vscode;$pm2 start vscode.config.js\"";
-                $hcpp->log( $cmd );
-                $hcpp->log( shell_exec( $cmd ) );
+                shell_exec( $cmd );
             }else{
                 $this->update_token( $user );
             }
@@ -141,7 +137,7 @@ if ( ! class_exists( 'VSCode') ) {
             }
 
             // Delete the VSCode Server instance
-            $pm2 = trim( shell_exec( 'which pm2' ) );
+            $pm2 = trim( shell_exec( 'find /opt/nvm/versions -name pm2 -type f -perm /a+x -print -quit' ) );
             $cmd = "runuser -l $user -c \"cd \/opt\/vscode;$pm2 delete vscode-$user.$hostname\"";
             shell_exec( $cmd );
             return $args;
