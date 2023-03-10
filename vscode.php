@@ -67,7 +67,7 @@ if ( ! class_exists( 'VSCode') ) {
                 mkdir( "/home/$user/conf/web/vscode-$user.$hostname" );
 
                 // Run pm2 first time
-                $cmd = "runuser -l $user -c \"cd /home/$user && source /opt/nvm/nvm.sh ; pm2\"";
+                $cmd = "runuser -l $user -c \"cd /home/$user && source /opt/nvm/nvm.sh ; pm2 status\"";
                 shell_exec( $cmd );
             }
 
