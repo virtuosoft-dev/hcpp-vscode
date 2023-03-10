@@ -107,10 +107,10 @@ if ( ! class_exists( 'VSCode') ) {
             }
 
             // Start the VSCode Server instance
-            $cmd = "pm2=$(which pm2);runuser -l $user -c \"cd \/opt\/vscode;\$pm2 pid vscode-$user.$hostname\"";
+            $cmd = "pm2=$(which pm2);runuser -l $user -c \"cd /opt/vscode;\$pm2 pid vscode-$user.$hostname\"";
             $hcpp->log( $cmd );
             if ( trim( shell_exec( $cmd ) ) === '' ) {
-                $cmd = "pm2=$(which pm2);runuser -l $user -c \"cd \/opt\/vscode;\$pm2 start vscode.config.js\"";
+                $cmd = "pm2=$(which pm2);runuser -l $user -c \"cd /opt/vscode;\$pm2 start vscode.config.js\"";
                 $hcpp->log( $cmd );
                 shell_exec( $cmd );
             }else{
