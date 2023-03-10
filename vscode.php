@@ -68,7 +68,8 @@ if ( ! class_exists( 'VSCode') ) {
 
                 // Run pm2 first time
                 $cmd = "runuser -l $user -c \"cd /home/$user && source /opt/nvm/nvm.sh ; pm2 status\"";
-                shell_exec( $cmd );
+                $hcpp->log( $cmd );
+                $hcpp->log( shell_exec( $cmd ) );
             }
 
             // Get user account first IP address.
@@ -113,7 +114,7 @@ if ( ! class_exists( 'VSCode') ) {
             $cmd = "runuser -l $user -c \"cd /opt/vscode && source /opt/nvm/nvm.sh ; pm2 pid vscode-$user.$hostname\"";
             if ( trim( shell_exec( $cmd ) ) === '' ) {
                 $cmd = "runuser -l $user -c \"cd /opt/vscode && source /opt/nvm/nvm.sh ; pm2 start vscode.config.js\"";
-                shell_exec( $cmd );
+                $hcpp->log( shell_exec( $cmd ) );
             }else{
                 $this->update_token( $user );
             }
