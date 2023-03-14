@@ -81,4 +81,4 @@ rsync -r ./src/usr/local/hestia/ /usr/local/hestia/
 rsync -r ./src/opt/vscode/ /opt/vscode/
 
 # Notify installation has finished
-/usr/local/hestia/bin/v-add-user-notification admin "VSCode" "&#128309; VSCode plugin has finished installing."
+/usr/local/hestia/bin/v-add-user-notification admin "VSCode" "<span style=\"color:#0092FF;\"><i class=\"fas fa-file-code\"></i></span> VSCode plugin has finished installing."
