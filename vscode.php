@@ -141,7 +141,7 @@ if ( ! class_exists( 'VSCode') ) {
             }
 
             // Delete the VSCode Server instance
-            $cmd = "runuser -l $user -c \"cd \/opt\/vscode && source /opt/nvm/nvm.sh ; delete vscode-$user.$hostname\"";
+            $cmd = "runuser -l $user -c \"cd \/opt\/vscode && source /opt/nvm/nvm.sh ;pm2 delete vscode-$user.$hostname;pm2 save --force\"";
             shell_exec( $cmd );
             return $args;
         }
