@@ -18,7 +18,7 @@ if ( ! class_exists( 'VSCode') ) {
             global $hcpp;
             $hcpp->vscode = $this;
             $hcpp->add_action( 'priv_unsuspend_domain', [ $this, 'priv_unsuspend_domain' ] );
-            $hcpp->add_action( 'priv_add_web_domain', [ $this, 'priv_add_web_domain' ] );
+            $hcpp->add_action( 'new_web_domain_ready', [ $this, 'new_web_domain_ready' ] );
             $hcpp->add_action( 'priv_delete_user', [ $this, 'priv_delete_user' ] );
             $hcpp->add_action( 'invoke_plugin', [ $this, 'invoke_plugin' ] );
             $hcpp->add_action( 'render_page', [ $this, 'render_page' ] );
@@ -29,7 +29,7 @@ if ( ! class_exists( 'VSCode') ) {
         }
 
         // Trigger setup and configuration when domain is created.
-        public function priv_add_web_domain( $args ) {
+        public function new_web_domain_ready( $args ) {
             global $hcpp;
             $user = $args[0];
             $domain = $args[1];
