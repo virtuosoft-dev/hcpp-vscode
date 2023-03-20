@@ -150,6 +150,43 @@ if ( ! class_exists( 'VSCode') ) {
         public function configure( $user, $domain ) {
 
             // TODO: write .vscode/settings.json and .vscode/launch.json
+            // 
+            // {
+            //     // Use IntelliSense to learn about possible attributes.
+            //     // Hover to view descriptions of existing attributes.
+            //     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+            //     "version": "0.2.0",
+            //     "configurations": [
+            //         {
+            //             "name": "Listen for Xdebug",
+            //             "type": "php",
+            //             "request": "launch",
+            //             "hostname": "127.0.0.1",
+            //             "port": 12003,
+            //             "pathMappings": {
+            //                 "/home/farmer/web/test3.openmy.info/public_html/": "${workspaceFolder}/"
+            //             }
+            //         }
+            //     ]
+            // }
+
+            // {
+            //     // Use IntelliSense to learn about possible attributes.
+            //     // Hover to view descriptions of existing attributes.
+            //     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+            //     "version": "0.2.0",
+            //     "configurations": [
+            //         {
+            //             "type": "node",
+            //             "request": "attach",
+            //             "name": "Debug NodeJS",
+            //             "port": 53001
+            //         }
+            //     ]
+            // }
+
+
+
 
         }
 
@@ -177,7 +214,7 @@ if ( ! class_exists( 'VSCode') ) {
             $code = '<a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token . '&folder=';
             $code .= '/home/' . $user . '/web/' . $domain . '" target="_blank" class="ui-button cancel" ';
             $code .= 'dir="ltr"><i class="fas fa-file-code status-icon blue">';
-            $code .= '</i> Open VSCode Editor</a>';
+            $code .= '</i> VSCode Editor</a>';
 
             // Inject the button into the page's toolbar buttonstrip
             $quick = '"fas fa-magic status-icon blue';
