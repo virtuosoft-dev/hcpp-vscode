@@ -214,7 +214,7 @@ if ( ! class_exists( 'VSCode') ) {
             // Create blue code icon button to appear before Quick Installer button
             $code = '<a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token . '&folder=';
             $code .= '/home/' . $user . '/web/' . $domain . '" target="_blank" class="button button-secondary ui-button cancel" ';
-            $code .= 'dir="ltr"><i class="fas fa-file-code status-icon blue" style="color: royalblue;">';
+            $code .= 'dir="ltr"><i class="fas fa-file-code status-icon blue" style="color: #0092FF;">';
             $code .= '</i> VSCode Editor</a>';
 
             // Inject the button into the page's toolbar buttonstrip
@@ -257,7 +257,7 @@ if ( ! class_exists( 'VSCode') ) {
                 $new .= str_replace( '%folder%', $folder, $code ) . $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
                 $content = $hcpp->delLeftMost( $content, '</div>' );
             }
-            $new .= '<style>i.vscode:hover { color: royalblue; }</style>';
+            $new .= '<style>i.vscode:hover { color: #0092FF; }</style>';
             $new .= $content;
             $args['content'] = $new;
             return $args;
