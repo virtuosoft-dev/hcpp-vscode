@@ -19,3 +19,5 @@ rm /usr/local/hestia/data/tempaltes/web/php-fpm/7.4xdbg.tpl
 rm /usr/local/hestia/data/tempaltes/web/php-fpm/8.0xdbg.tpl
 rm /usr/local/hestia/data/tempaltes/web/php-fpm/8.1xdbg.tpl
 rm /usr/local/hestia/data/tempaltes/web/php-fpm/8.2xdbg.tpl
+
+rm -rf /opt/vscode
