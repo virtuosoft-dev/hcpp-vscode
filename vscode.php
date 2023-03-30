@@ -253,7 +253,7 @@ if ( ! class_exists( 'VSCode') ) {
                 $new .= str_replace( '%folder%', $folder, $code ) . $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
                 $content = $hcpp->delLeftMost( $content, '</div>' );
             }
-            $new .= '<style>.status-icon blue { color: gray; } .status-icon:hover { color: royalblue; }</style>';
+            $new .= '<style>.fas fa-file-code status-icon blue { color: gray; } .fas fa-file-code status-icon blue:hover { color: royalblue; }</style>';
             $new .= $content;
             $args['content'] = $new;
             return $args;
