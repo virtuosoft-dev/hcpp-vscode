@@ -239,7 +239,7 @@ if ( ! class_exists( 'VSCode') ) {
             $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
             $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
             <a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token .'&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
-                <i class="fas fa-file-code status-icon blue status-icon dim"></i>
+                <i class="fas fa-file-code status-icon blue status-icon dim vscode"></i>
             </a></div>&nbsp;';
             $new = '';
 
@@ -253,7 +253,7 @@ if ( ! class_exists( 'VSCode') ) {
                 $new .= str_replace( '%folder%', $folder, $code ) . $div . $hcpp->getLeftMost( $content, '</div>' ) . "</div>";
                 $content = $hcpp->delLeftMost( $content, '</div>' );
             }
-            $new .= '<style>.fas fa-file-code status-icon blue { color: gray; } .fas fa-file-code status-icon blue:hover { color: royalblue; }</style>';
+            $new .= '<style>i.vscode{ color: gray; } i.vscode:hover { color: royalblue; }</style>';
             $new .= $content;
             $args['content'] = $new;
             return $args;
