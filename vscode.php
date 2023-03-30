@@ -219,6 +219,9 @@ if ( ! class_exists( 'VSCode') ) {
 
             // Inject the button into the page's toolbar buttonstrip
             $quick = '"fas fa-magic status-icon blue';
+            if ( strpos( $content, $quick ) === false ) {
+                $quick = '"fas fa-magic icon-blue';
+            }
             $before = $hcpp->getLeftMost( $content, $quick );
             $after = $quick . $hcpp->delLeftMost( $content, $quick );
             $after = '<a href' . $hcpp->getRightMost( $before, '<a href' ) . $after;
