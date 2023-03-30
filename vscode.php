@@ -218,9 +218,9 @@ if ( ! class_exists( 'VSCode') ) {
             $code .= '</i> VSCode Editor</a>';
 
             // Inject the button into the page's toolbar buttonstrip
-            $quick = '"fas fa-magic status-icon blue';
+            $quick = '"fas fa-magic status-icon blue'; // HestiaCP 1.6.X
             if ( strpos( $content, $quick ) === false ) {
-                $quick = '"fas fa-magic icon-blue';
+                $quick = '"fas fa-magic icon-blue'; // HestiaCP 1.7.X
             }
             $before = $hcpp->getLeftMost( $content, $quick );
             $after = $quick . $hcpp->delLeftMost( $content, $quick );
