@@ -203,7 +203,7 @@ if ( ! class_exists( 'VSCode') ) {
 
        // Add VSCode Server icon to our web domain edit page.
        public function render_edit_web( $args ) {
-        return $args;
+
             global $hcpp;
             $user = trim( $args['user'], "'" );
             $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
