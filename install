@@ -14,6 +14,7 @@ apt-get -qq install php8.2-xdebug
 # Copy PHP profiles to PHP Xdebug versions
 mkdir /etc/php/7.4xdbg
 rsync -a /etc/php/7.4/ /etc/php/7.4xdbg
+rm -rf /etc/php/7.4xdbg/fpm/pool.d
 ./link_rename.sh /etc/php/7.4xdbg/fpm/conf.d /etc/php/7.4/ /etc/php/7.4xdbg/
 ln -s /etc/php/7.4xdbg/mods-available/xdebug.ini /etc/php/7.4xdbg/fpm/conf.d/20-xdebug.ini
 mkdir /etc/php/8.0xdbg
@@ -23,10 +24,12 @@ rm -rf /etc/php/8.0xdbg/fpm/pool.d
 ln -s /etc/php/8.0xdbg/mods-available/xdebug.ini /etc/php/8.0xdbg/fpm/conf.d/20-xdebug.ini
 mkdir /etc/php/8.1xdbg
 rsync -al /etc/php/8.1/ /etc/php/8.1xdbg
+rm -rf /etc/php/8.1xdbg/fpm/pool.d
 ./link_rename.sh /etc/php/8.1xdbg/fpm/conf.d /etc/php/8.1/ /etc/php/8.1xdbg/
 ln -s /etc/php/8.1xdbg/mods-available/xdebug.ini /etc/php/8.1xdbg/fpm/conf.d/20-xdebug.ini
 mkdir /etc/php/8.2xdbg
 rsync -al /etc/php/8.2/ /etc/php/8.2xdbg
+rm -rf /etc/php/8.2xdbg/fpm/pool.d
 ./link_rename.sh /etc/php/8.2xdbg/fpm/conf.d /etc/php/8.2/ /etc/php/8.2xdbg/
 ln -s /etc/php/8.2xdbg/mods-available/xdebug.ini /etc/php/8.2xdbg/fpm/conf.d/20-xdebug.ini
 
