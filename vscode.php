@@ -240,8 +240,8 @@ if ( ! class_exists( 'VSCode') ) {
             $content = $args['content'];
 
             // Create blue code icon before pencil/edit icon
-            $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" key-action="href">';
-            $code = '<div class="actions-panel__col actions-panel__code" key-action="href">
+            $div = '<div class="actions-panel__col actions-panel__edit shortcut-enter" data-key-action="href">';
+            $code = '<div class="actions-panel__col actions-panel__code" data-key-action="href">
             <a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token .'&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
                 <i class="fas fa-file-code status-icon blue status-icon dim icon-dim vscode"></i>
             </a></div>&nbsp;';
