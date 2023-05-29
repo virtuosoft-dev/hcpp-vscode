@@ -74,7 +74,7 @@ if ( ! class_exists( 'VSCode') ) {
 
             // Get user account first IP address.
             $ip = array_key_first(
-                json_decode( shell_exec( '/usr/local/hestia/bin/v-list-user-ips homestead json' ), true ) 
+                json_decode( shell_exec( '/usr/local/hestia/bin/v-list-user-ips ' . $user . ' json' ), true ) 
             );
 
             // Create the nginx.conf file.
