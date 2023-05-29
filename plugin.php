@@ -1,8 +1,10 @@
 <?php
 /**
  * Plugin Name: VSCode
- * Plugin URI: https://github.com/steveorevo/hestiacp-vscode
+ * Plugin URI: https://github.com/virtuosoft-dev/hcpp-vscode
  * Description: VSCode is a plugin for HestiaCP instance that installs a multitenant VSCode server.
+ * Version: 1.0.0
+ * Author: Stephen J. Carnam
  */
 
 // Register the install and uninstall scripts
