@@ -5,7 +5,7 @@
  * 
  * @version 1.0.0
  * @license GPL-3.0
- * @link https://github.com/steveorevo/hestiacp-vscode
+ * @link https://github.com/virtuosoft-dev/hcpp-vscode
  * 
  */
 
