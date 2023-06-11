@@ -67,7 +67,7 @@ if ( ! class_exists( 'VSCode') ) {
                 mkdir( "/home/$user/conf/web/vscode-$user.$hostname" );
 
                 // Run pm2 first time
-                $cmd = "runuser -l $user -c \"cd /home/$user && source /opt/nvm/nvm.sh ; pm2 status\"";
+                $cmd = "runuser -s /bin/bash -l $user -c \"cd /home/$user && source /opt/nvm/nvm.sh ; pm2 status\"";
                 $hcpp->log( $cmd );
                 $hcpp->log( shell_exec( $cmd ) );
             }
@@ -111,9 +111,9 @@ if ( ! class_exists( 'VSCode') ) {
             }
 
             // Start the VSCode Server instance
-            $cmd = "runuser -l $user -c \"cd /opt/vscode && source /opt/nvm/nvm.sh ; pm2 pid vscode-$user.$hostname\"";
+            $cmd = "runuser -s /bin/bash -l $user -c \"cd /opt/vscode && source /opt/nvm/nvm.sh ; pm2 pid vscode-$user.$hostname\"";
             if ( trim( shell_exec( $cmd ) ) === '' ) {
-                $cmd = "runuser -l $user -c \"cd /opt/vscode && source /opt/nvm/nvm.sh ; pm2 start vscode.config.js\"";
+                $cmd = "runuser -s /bin/bash -l $user -c \"cd /opt/vscode && source /opt/nvm/nvm.sh ; pm2 start vscode.config.js\"";
                 $hcpp->log( shell_exec( $cmd ) );
             }else{
                 $this->update_token( $user );
@@ -141,7 +141,7 @@ if ( ! class_exists( 'VSCode') ) {
             }
 
             // Delete the VSCode Server instance
-            $cmd = "runuser -l $user -c \"cd \/opt\/vscode && source /opt/nvm/nvm.sh ;pm2 delete vscode-$user.$hostname;pm2 save --force\"";
+            $cmd = "runuser -s /bin/bash -l $user -c \"cd \/opt\/vscode && source /opt/nvm/nvm.sh ;pm2 delete vscode-$user.$hostname;pm2 save --force\"";
             shell_exec( $cmd );
             return $args;
         }
