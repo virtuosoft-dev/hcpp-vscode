@@ -60,7 +60,6 @@ if ( ! class_exists( 'VSCode') ) {
         public function setup( $user ) {
             global $hcpp;
             $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
-            $conf = "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf";
 
             // Create the configuration folder
             if ( ! is_dir( "/home/$user/conf/web/vscode-$user.$hostname" ) ) {
@@ -78,6 +77,7 @@ if ( ! class_exists( 'VSCode') ) {
             );
 
             // Create the nginx.conf file.
+            $conf = "/home/$user/conf/web/vscode-$user.$hostname/nginx.conf";
             $content = file_get_contents( __DIR__ . '/conf-web/nginx.conf' );
             $content = str_replace( 
                 ['%ip%', '%user%', '%hostname%'],
