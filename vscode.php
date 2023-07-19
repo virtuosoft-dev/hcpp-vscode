@@ -18,14 +18,14 @@ if ( ! class_exists( 'VSCode') ) {
             global $hcpp;
             $hcpp->vscode = $this;
             $hcpp->add_action( 'priv_unsuspend_domain', [ $this, 'priv_unsuspend_domain' ] );
-            $hcpp->add_action( 'new_web_domain_ready', [ $this, 'new_web_domain_ready' ] );
+            $hcpp->add_action( 'hcpp_new_domain_ready', [ $this, 'hcpp_new_domain_ready' ] );
             $hcpp->add_action( 'priv_delete_user', [ $this, 'priv_delete_user' ] );
-            $hcpp->add_action( 'invoke_plugin', [ $this, 'invoke_plugin' ] );
+            $hcpp->add_action( 'hcpp_invoke_plugin', [ $this, 'hcpp_invoke_plugin' ] );
             $hcpp->add_action( 'render_page', [ $this, 'render_page' ] );
         }
 
         // Trigger setup and configuration when domain is created.
-        public function new_web_domain_ready( $args ) {
+        public function hcpp_new_domain_ready( $args ) {
             global $hcpp;
             $user = $args[0];
             $domain = $args[1];
@@ -45,7 +45,7 @@ if ( ! class_exists( 'VSCode') ) {
         }
 
         // Return requests for the VSCode Server token for the given user.
-        public function invoke_plugin( $args ) {
+        public function hcpp_invoke_plugin( $args ) {
             if ( $args[0] !== 'vscode_get_token' ) return $args;
             $user = $args[1];
             echo file_get_contents( "/home/$user/.openvscode-server/data/token" );
