@@ -21,7 +21,7 @@ if ( ! class_exists( 'VSCode') ) {
             $hcpp->add_action( 'hcpp_new_domain_ready', [ $this, 'hcpp_new_domain_ready' ] );
             $hcpp->add_action( 'priv_delete_user', [ $this, 'priv_delete_user' ] );
             $hcpp->add_action( 'hcpp_invoke_plugin', [ $this, 'hcpp_invoke_plugin' ] );
-            $hcpp->add_action( 'render_page', [ $this, 'render_page' ] );
+            $hcpp->add_action( 'hcpp_render_page', [ $this, 'hcpp_render_page' ] );
         }
 
         // Trigger setup and configuration when domain is created.
@@ -187,7 +187,7 @@ if ( ! class_exists( 'VSCode') ) {
         }
 
         // Add VSCode Server icon to our web domain list and button to domain edit pages.
-        public function render_page( $args ) {
+        public function hcpp_render_page( $args ) {
             if ( $args['page'] == 'list_web' ) {
                 $args = $this->render_list_web( $args );
             }
