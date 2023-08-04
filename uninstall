@@ -21,3 +21,6 @@ rm /usr/local/hestia/data/tempaltes/web/php-fpm/8.1xdbg.tpl
 rm /usr/local/hestia/data/tempaltes/web/php-fpm/8.2xdbg.tpl
 
 rm -rf /opt/vscode
+
+# Clean up all vscode- users
+rm -rf /etc/nginx/conf.d/domains/vscode-*
