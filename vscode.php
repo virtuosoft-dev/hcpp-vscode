@@ -230,6 +230,7 @@ if ( ! class_exists( 'VSCode') ) {
         // Add VSCode Server icon to our web domain list page.
         public function render_list_web( $args ) {
             global $hcpp;
+            $hcpp->log("vscode render_list_web");
             $user = trim( $args['user'], "'");
             $content = $args['content'];
             $hostname =  $hcpp->delLeftMost( $hcpp->getLeftMost( $_SERVER['HTTP_HOST'], ':' ), '.' );
