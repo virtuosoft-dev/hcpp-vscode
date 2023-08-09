@@ -179,7 +179,7 @@
             );
 
             // Uncomment basic auth for non-Personal Web Server edition.
-            if ( property_exists( $hcpp, 'cg_pws' ) ) {
+            if ( !property_exists( $hcpp, 'cg_pws' ) ) {
                 $content = str_replace( "#auth_basic", "auth_basic", $content );
             }
             file_put_contents( $conf, $content );
@@ -194,7 +194,7 @@
             );
 
             // Uncomment basic auth on SSL for non-Personal Web Server edition.
-            if ( property_exists( $hcpp, 'cg_pws' ) ) {
+            if ( !property_exists( $hcpp, 'cg_pws' ) ) {
                 $content = str_replace( "#auth_basic", "auth_basic", $content );
             }
             file_put_contents( $ssl_conf, $content );
