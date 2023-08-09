@@ -121,8 +121,8 @@
 
             // Reload nginx
             global $hcpp;
-            $cmd = '(service nginx reload) > /dev/null 2>&1 &';
-            $cmd = $hcpp->do_action( 'vscode_nginx_reload', $cmd );
+            $cmd = '(service nginx restart) > /dev/null 2>&1 &';
+            $cmd = $hcpp->do_action( 'vscode_nginx_restart', $cmd );
             shell_exec( $cmd );
         }
 
@@ -144,6 +144,12 @@
                global $hcpp;
                $hcpp->log( "Killed node vscode process $pid" );
            }
+
+            // Remove service link and reload nginx
+            global $hcpp;
+            $cmd = '(rm -f /etc/nginx/conf.d/domains/vscode-* ; service nginx restart) > /dev/null 2>&1 &';
+            $cmd = $hcpp->do_action( 'vscode_nginx_restart', $cmd );
+            shell_exec( $cmd );
         }
 
         // Setup VSCode for user.
@@ -244,10 +250,6 @@
                 unlink( $link );
             }
             $link = "/etc/nginx/conf.d/domains/vscode-$user.$domain.ssl.conf";
-            if ( is_link( $link ) ) {
-                unlink( $link );
-            }
-            $link = "/etc/apache2/conf.d/domains/vscode-$user.$domain.conf";
             if ( is_link( $link ) ) {
                 unlink( $link );
             }
