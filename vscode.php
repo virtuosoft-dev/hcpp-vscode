@@ -37,7 +37,7 @@
                 $path = '/home' . $hcpp->delLeftMost( $path, '/home' );
                 $path = $hcpp->delRightMost( $path, '/cg_pws_ssl &&' );
                 $cmd = $hcpp->delRightMost( $cmd, '/usr/local/hestia/bin/v-delete-web-domain-ssl ' );
-                $cmd .= " cp -r $path/cg_pws_ssl/* $path/ssl ";
+                $cmd .= " mkdir -p $path/ssl ; cp -r $path/cg_pws_ssl/* $path/ssl ";
                 $cmd = $hcpp->do_action( 'vscode_generate_website_cert', $cmd );
             }
             return $cmd;
