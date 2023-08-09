@@ -25,6 +25,18 @@
             $hcpp->add_action( 'priv_delete_user', [ $this, 'priv_delete_user' ] );
             $hcpp->add_action( 'post_add_user', [ $this, 'post_add_user' ] );
             $hcpp->add_action( 'hcpp_rebooted', [ $this, 'hcpp_rebooted' ] );
+            $hcpp->add_action( 'hcpp_plugin_disabled', [ $this, 'hcpp_plugin_disabled' ] );
+            $hcpp->add_action( 'hcpp_plugin_enabled', [ $this, 'hcpp_plugin_enabled' ] );
+        }
+
+        // Stop services on plugin disabled.
+        public function hcpp_plugin_disabled() {
+            $this->stop();
+        }
+
+        // Start services on plugin enabled.
+        public function hcpp_plugin_enabled() {
+            $this->start();
         }
 
         // Intercept the certificate generation and copy over ssl certs for the vscode domain.
