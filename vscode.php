@@ -27,10 +27,28 @@
             $hcpp->add_action( 'hcpp_rebooted', [ $this, 'hcpp_rebooted' ] );
             $hcpp->add_action( 'hcpp_plugin_disabled', [ $this, 'hcpp_plugin_disabled' ] );
             $hcpp->add_action( 'hcpp_plugin_enabled', [ $this, 'hcpp_plugin_enabled' ] );
+            $hcpp->add_action( 'hcpp_render_page', [ $this, 'hcpp_render_page' ] );
         }
 
         // Stop services on plugin disabled.
         public function hcpp_plugin_disabled() {
+
+            // Gather list of all users
+            $cmd = "/usr/local/hestia/bin/v-list-users json";
+            $result = shell_exec( $cmd );
+            try {
+                $result = json_decode( $result, true, 512, JSON_THROW_ON_ERROR );
+            } catch (Exception $e) {
+                var_dump( $e );
+                return;
+            }
+            
+            // Remove VSCode for each valid user
+            foreach( $result as $key=> $value ) {
+                if ( $key === 'admin') continue;
+                if ( $value['SHELL'] !== 'bash' ) continue;
+                unlink( "/home/$key/.openvscode-server/data/token" );
+            }
             $this->stop();
         }
 
@@ -60,10 +78,14 @@
             $this->start();
         }
 
-        // Respond to invoke-plugin vscode_restart.
+        // Respond to invoke-plugin vscode_restart and vscode_get_token requests.
         public function hcpp_invoke_plugin( $args ) {
             if ( $args[0] === 'vscode_restart' ) {
                 $this->restart();
+            }
+            if ( $args[0] === 'vscode_get_token' ) {
+                $user = $args[1];
+                echo file_get_contents( "/home/$user/.openvscode-server/data/token" );
             }
             return $args;
         }
@@ -232,6 +254,9 @@
                 symlink( $ssl_conf, $link );
             }
 
+            // Create VSCode token if it doesn't already exist.
+            $this->update_token( $user );
+
             // Start the VSCode service manually (outside of PM2).
             $cmd = 'runuser -l ' . $user . ' -c "';
             $cmd .= "(/opt/vscode/node /opt/vscode/out/server-main.js --port $port) > /dev/null 2>&1 &";
@@ -263,6 +288,95 @@
         public function post_delete_user( $args ) {
             global $hcpp;
             $hcpp->log( $hcpp->run( 'invoke-plugin vscode_restart' ) );
+            return $args;
+        }
+
+        // Update the VSCode Server access token
+        public function update_token( $user ) {
+            global $hcpp;
+            $token = $hcpp->nodeapp->random_chars( 32 );
+            $cmd = "echo \"$token\" > \/home\/$user\/.openvscode-server\/data\/token && ";
+            $cmd .= "chown $user:$user \/home\/$user\/.openvscode-server\/data\/token && ";
+            $cmd .= "chmod 600 \/home\/$user\/.openvscode-server\/data\/token";
+            $cmd = $hcpp->do_action( 'vscode_update_token', $cmd );
+            $hcpp->log( shell_exec( $cmd ) );
+        }
+
+        // Add VSCode Server icon to our web domain list and button to domain edit pages.
+        public function hcpp_render_page( $args ) {
+            if ( $args['page'] == 'list_web' ) {
+                $args = $this->render_list_web( $args );
+            }
+            if ( $args['page'] == 'edit_web' ) {
+                $args = $this->render_edit_web( $args );
+            }
+            return $args;
+        }
+
+        // Add VSCode Server button to our web domain edit page.
+        public function render_edit_web( $args ) {
+
+                global $hcpp;
+                $user = trim( $args['user'], "'" );
+                $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
+                $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
+                $domain = $_GET['domain'];
+                $content = $args['content'];
+
+                // Create blue code icon button to appear before Quick Installer button
+                $code = '<a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token . '&folder=';
+                $code .= '/home/' . $user . '/web/' . $domain . '" target="_blank" class="button button-secondary ui-button cancel" ';
+                $code .= 'dir="ltr"><i class="fas fa-file-code status-icon blue" style="color: #0092FF;">';
+                $code .= '</i> VSCode Editor</a>';
+
+                // Inject the button into the page's toolbar buttonstrip
+                $quick = '"fas fa-magic status-icon blue'; // HestiaCP 1.6.X
+                if ( strpos( $content, $quick ) === false ) {
+                    $quick = '"fas fa-magic icon-blue'; // HestiaCP 1.7.X
+                }
+                $before = $hcpp->getLeftMost( $content, $quick );
+                $after = $quick . $hcpp->delLeftMost( $content, $quick );
+                $after = '<a href' . $hcpp->getRightMost( $before, '<a href' ) . $after;
+                $before = $hcpp->delRightMost( $before, '<a href' );
+                $content = $before . $code . $after;
+                $args['content'] = $content;
+                return $args;
+        }
+
+        // Add VSCode Server icon to our web domain list page.
+        public function render_list_web( $args ) {
+            global $hcpp;
+            $hcpp->log("vscode render_list_web");
+            $user = trim( $args['user'], "'");
+            $content = $args['content'];
+            $hostname =  $hcpp->delLeftMost( $hcpp->getLeftMost( $_SERVER['HTTP_HOST'], ':' ), '.' );
+            $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
+
+            // Create white envelope icon before pencil/edit icon
+            $div = '<li class="units-table-row-action shortcut-enter" data-key-action="href">';
+            $code = '<li class="units-table-row-action" data-key-action="href">
+                        <a class="units-table-row-action-link" href="https://vscode-%user%.%hostname%/?tkn=%token%&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
+                            <i class="fas fa-file-code icon-blue vscode"></i>
+                            <span class="u-hide-desktop">VSCode</span>
+                        </a>
+                    </li>';
+            $new = '';
+
+            // Inject the envelope icon for each domain
+            while( false !== strpos( $content, $div ) ) {
+                $new .= $hcpp->getLeftMost( $content, $div );
+                $content = $hcpp->delLeftMost( $content, $div );
+                $domain = $hcpp->getLeftMost( $hcpp->delLeftMost( $content, '?domain=' ), '&' );
+                $folder = "/home/$user/web/$domain";
+                $new .= str_replace( 
+                    ['%user%', '%hostname%', '%token%', '%folder%'],
+                    [$user, $hostname, $token, $folder],
+                    $code 
+                );
+                $new .= $div;
+            }
+            $new .= $content;
+            $args['content'] = $new;
             return $args;
         }
     }
@@ -446,83 +560,7 @@
 
 //         }
 
-//         // Add VSCode Server icon to our web domain list and button to domain edit pages.
-//         public function hcpp_render_page( $args ) {
-//             if ( $args['page'] == 'list_web' ) {
-//                 $args = $this->render_list_web( $args );
-//             }
-//             if ( $args['page'] == 'edit_web' ) {
-//                 $args = $this->render_edit_web( $args );
-//             }
-//             return $args;
-//         }
 
-//         // Add VSCode Server button to our web domain edit page.
-//         public function render_edit_web( $args ) {
-
-//                 global $hcpp;
-//                 $user = trim( $args['user'], "'" );
-//                 $hostname = trim( $hcpp->delLeftMost( shell_exec( 'hostname -f' ), '.' ) );
-//                 $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
-//                 $domain = $_GET['domain'];
-//                 $content = $args['content'];
-
-//                 // Create blue code icon button to appear before Quick Installer button
-//                 $code = '<a href="https://vscode-' . $user . '.' . $hostname . '/?tkn=' . $token . '&folder=';
-//                 $code .= '/home/' . $user . '/web/' . $domain . '" target="_blank" class="button button-secondary ui-button cancel" ';
-//                 $code .= 'dir="ltr"><i class="fas fa-file-code status-icon blue" style="color: #0092FF;">';
-//                 $code .= '</i> VSCode Editor</a>';
-
-//                 // Inject the button into the page's toolbar buttonstrip
-//                 $quick = '"fas fa-magic status-icon blue'; // HestiaCP 1.6.X
-//                 if ( strpos( $content, $quick ) === false ) {
-//                     $quick = '"fas fa-magic icon-blue'; // HestiaCP 1.7.X
-//                 }
-//                 $before = $hcpp->getLeftMost( $content, $quick );
-//                 $after = $quick . $hcpp->delLeftMost( $content, $quick );
-//                 $after = '<a href' . $hcpp->getRightMost( $before, '<a href' ) . $after;
-//                 $before = $hcpp->delRightMost( $before, '<a href' );
-//                 $content = $before . $code . $after;
-//                 $args['content'] = $content;
-//                 return $args;
-//         }
-
-//         // Add VSCode Server icon to our web domain list page.
-//         public function render_list_web( $args ) {
-//             global $hcpp;
-//             $hcpp->log("vscode render_list_web");
-//             $user = trim( $args['user'], "'");
-//             $content = $args['content'];
-//             $hostname =  $hcpp->delLeftMost( $hcpp->getLeftMost( $_SERVER['HTTP_HOST'], ':' ), '.' );
-//             $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
-
-//             // Create white envelope icon before pencil/edit icon
-//             $div = '<li class="units-table-row-action shortcut-enter" data-key-action="href">';
-//             $code = '<li class="units-table-row-action" data-key-action="href">
-//                         <a class="units-table-row-action-link" href="https://vscode-%user%.%hostname%/?tkn=%token%&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
-//                             <i class="fas fa-file-code icon-blue vscode"></i>
-//                             <span class="u-hide-desktop">VSCode</span>
-//                         </a>
-//                     </li>';
-//             $new = '';
-
-//             // Inject the envelope icon for each domain
-//             while( false !== strpos( $content, $div ) ) {
-//                 $new .= $hcpp->getLeftMost( $content, $div );
-//                 $content = $hcpp->delLeftMost( $content, $div );
-//                 $domain = $hcpp->getLeftMost( $hcpp->delLeftMost( $content, '?domain=' ), '&' );
-//                 $folder = "/home/$user/web/$domain";
-//                 $new .= str_replace( 
-//                     ['%user%', '%hostname%', '%token%', '%folder%'],
-//                     [$user, $hostname, $token, $folder],
-//                     $code 
-//                 );
-//                 $new .= $div;
-//             }
-//             $new .= $content;
-//             $args['content'] = $new;
-//             return $args;
-//         }
 //     }
 //     new VSCode();
 // }
