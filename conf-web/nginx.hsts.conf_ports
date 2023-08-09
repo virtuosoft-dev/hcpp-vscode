@@ -1,1 +1,0 @@
-include /usr/local/hestia/data/hcpp/ports/%user%/vscode-%user%.%hostname%.ports;

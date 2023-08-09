@@ -59,7 +59,7 @@ systemctl enable php8.2xdbg-fpm
 # Install Open VSCode Server
 ############################################
 
-cd /tmp
+cd /tmp || exit
 architecture=""
 
 # Detect x64 or arm64 system
@@ -77,7 +77,7 @@ mv openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH} /opt/vscod
 rm openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
 
 # Install templates
-cd /usr/local/hestia/plugins/vscode
+cd /usr/local/hestia/plugins/vscode || exit
 rsync -r ./src/usr/local/hestia/ /usr/local/hestia/
 
 # Install pm2 controll of Open VSCode Server
