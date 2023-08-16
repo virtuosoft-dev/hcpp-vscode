@@ -27,7 +27,7 @@
             $hcpp->add_action( 'hcpp_rebooted', [ $this, 'hcpp_rebooted' ] );
             $hcpp->add_action( 'hcpp_plugin_disabled', [ $this, 'hcpp_plugin_disabled' ] );
             $hcpp->add_action( 'hcpp_plugin_enabled', [ $this, 'hcpp_plugin_enabled' ] );
-            $hcpp->add_action( 'hcpp_render_page', [ $this, 'hcpp_render_page' ] );
+            $hcpp->add_action( 'hcpp_render_body', [ $this, 'hcpp_render_body' ] );
         }
 
         // Stop services on plugin disabled.
@@ -303,7 +303,7 @@
         }
 
         // Add VSCode Server icon to our web domain list and button to domain edit pages.
-        public function hcpp_render_page( $args ) {
+        public function hcpp_render_body( $args ) {
             if ( $args['page'] == 'list_web' ) {
                 $args = $this->render_list_web( $args );
             }
@@ -395,7 +395,7 @@
 //             $hcpp->add_action( 'hcpp_new_domain_ready', [ $this, 'hcpp_new_domain_ready' ] );
 //             $hcpp->add_action( 'priv_delete_user', [ $this, 'priv_delete_user' ] );
 //             $hcpp->add_action( 'hcpp_invoke_plugin', [ $this, 'hcpp_invoke_plugin' ] );
-//             $hcpp->add_action( 'hcpp_render_page', [ $this, 'hcpp_render_page' ] );
+//             $hcpp->add_action( 'hcpp_render_body', [ $this, 'hcpp_render_body' ] );
 //         }
 
 //         // Trigger setup and configuration when domain is created.
