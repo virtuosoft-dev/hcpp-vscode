@@ -151,21 +151,20 @@
         // Stop all VSCode services.
         public function stop() {
             
-           // Find all node vscode processes
-           $cmd = 'ps ax | grep "/opt/vscode/node /opt/vscode/out/server-main.js" | grep -v grep';
-           exec($cmd, $processes);
+            // Find all node vscode processes
+            $cmd = 'ps ax | grep "/opt/vscode/node /opt/vscode/out/server-main.js" | grep -v grep';
+            $processes = explode( PHP_EOL, shell_exec( $cmd ) );
 
-           // Loop through each process and extract the process ID (PID)
-           foreach ($processes as $process) {
-               $pid = preg_replace('/^\s*(\d+).*$/', '$1', $process);
+            // Loop through each process and extract the process ID (PID)
+            foreach ($processes as $process) {
+                $pid = preg_replace('/^\s*(\d+).*$/', '$1', $process);
 
-               // Kill the process
-               $kill = "kill $pid";
-               exec($kill, $output, $returnValue);
+                // Kill the process
+                shell_exec( "kill $pid" );
 
-               global $hcpp;
-               $hcpp->log( "Killed node vscode process $pid" );
-           }
+                global $hcpp;
+                $hcpp->log( "Killed node vscode process $pid" );
+            }
 
             // Remove service link and reload nginx
             global $hcpp;
