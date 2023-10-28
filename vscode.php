@@ -31,7 +31,8 @@
         }
 
         // Stop services on plugin disabled.
-        public function hcpp_plugin_disabled() {
+        public function hcpp_plugin_disabled( $plugin ) {
+            if ( $plugin !== 'vscode' ) return $plugin;
 
             // Gather list of all users
             $cmd = "/usr/local/hestia/bin/v-list-users json";
@@ -40,7 +41,7 @@
                 $result = json_decode( $result, true, 512, JSON_THROW_ON_ERROR );
             } catch (Exception $e) {
                 var_dump( $e );
-                return;
+                return $plugin;
             }
             
             // Remove VSCode for each valid user
@@ -50,11 +51,13 @@
                 unlink( "/home/$key/.openvscode-server/data/token" );
             }
             $this->stop();
+            return $plugin;
         }
 
         // Start services on plugin enabled.
-        public function hcpp_plugin_enabled() {
-            $this->start();
+        public function hcpp_plugin_enabled( $plugin ) {
+            if ( $plugin == 'vscode' ) $this->start();
+            return $plugin;
         }
 
         // Intercept the certificate generation and copy over ssl certs for the vscode domain.
