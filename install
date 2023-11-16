@@ -62,12 +62,13 @@ systemctl enable php8.2xdbg-fpm
 cd /tmp || exit
 architecture=""
 
-# Detect x64 or arm64 system
+# Detect x86_64 or aarch64 system
 case $(uname -m) in
-    i386)   architecture="linex-x64" ;;
+    i386)   architecture="linux-x64" ;;
     i686)   architecture="linux-x64" ;;
     x86_64) architecture="linux-x64" ;;
-    arm)    dpkg --print-architecture | grep -q "arm64" && architecture="linux-arm64" || architecture="linux-arm64" ;;
+    arm*)    dpkg --print-architecture | grep -q "arm64" && architecture="linux-arm64" || architecture="linux-arm" ;;
+    aarch64) architecture="linux-arm64" ;;
 esac
 export OPENVSCODE_SERVER_VERSION=1.84.0
 export OPENVSCODE_ARCH=$architecture
