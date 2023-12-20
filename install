@@ -79,7 +79,7 @@ case $(uname -m) in
     arm*)    dpkg --print-architecture | grep -q "arm64" && architecture="linux-arm64" || architecture="linux-arm" ;;
     aarch64) architecture="linux-arm64" ;;
 esac
-export OPENVSCODE_SERVER_VERSION=1.84.0
+export OPENVSCODE_SERVER_VERSION=1.85.1
 export OPENVSCODE_ARCH=$architecture
 wget https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v${OPENVSCODE_SERVER_VERSION}/openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
 tar -xzf openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
