@@ -208,7 +208,7 @@
                 $content
             );
 
-            // Uncomment basic auth for non-Devstia Preview edition.
+            // Uncomment basic auth for non-Devstia Personal Web edition.
             if ( !property_exists( $hcpp, 'dev_pw' ) ) {
                 $content = str_replace( "#auth_basic", "auth_basic", $content );
             }
@@ -223,20 +223,20 @@
                 $content
             );
 
-            // Uncomment basic auth on SSL for non-Devstia Preview edition.
+            // Uncomment basic auth on SSL for non-Devstia Personal Web edition.
             if ( !property_exists( $hcpp, 'dev_pw' ) ) {
                 $content = str_replace( "#auth_basic", "auth_basic", $content );
             }
             file_put_contents( $ssl_conf, $content );
 
-            // Generate website cert if it doesn't exist for Devstia Preview edition.
+            // Generate website cert if it doesn't exist for Devstia Personal Web edition.
             if ( property_exists( $hcpp, 'dev_pw' ) ) {
 
                 // Always regenerate the cert to ensure it's up to date.
                 $hcpp->dev_pw->generate_website_cert( $user, ["vscode-$user.$domain"] );
             }else{
 
-                // Force SSL on non-Devstia Preview edition.
+                // Force SSL on non-Devstia Personal Web edition.
                 $force_ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.conf";
                 $content = "return 301 https://\$host\$request_uri;";
                 file_put_contents( $force_ssl_conf, $content );
