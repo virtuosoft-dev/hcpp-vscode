@@ -354,7 +354,7 @@
             $hostname =  $hcpp->delLeftMost( $hcpp->getLeftMost( $_SERVER['HTTP_HOST'], ':' ), '.' );
             $token = trim( $hcpp->run( "invoke-plugin vscode_get_token $user" ) );
 
-            // Create white envelope icon before pencil/edit icon
+            // Create blue script icon before pencil/edit icon
             $div = '<li class="units-table-row-action shortcut-enter" data-key-action="href">';
             $code = '<li class="units-table-row-action" data-key-action="href">
                         <a class="units-table-row-action-link" href="https://vscode-%user%.%hostname%/?tkn=%token%&folder=%folder%" rel="noopener" target="_blank" title="Open VSCode Editor">
@@ -364,7 +364,7 @@
                     </li>';
             $new = '';
 
-            // Inject the envelope icon for each domain
+            // Inject the script icon for each domain
             while( false !== strpos( $content, $div ) ) {
                 $new .= $hcpp->getLeftMost( $content, $div );
                 $content = $hcpp->delLeftMost( $content, $div );
