@@ -241,7 +241,8 @@
                 $content = "return 301 https://\$host\$request_uri;";
                 file_put_contents( $force_ssl_conf, $content );
 
-                
+                // Support LE SSL certs for non-Devstia Personal Web edition.
+                $this->build_le_cert( $user );
             }
 
             // Create the nginx.conf configuration symbolic links.
@@ -267,7 +268,77 @@
             shell_exec( $cmd );
         }
 
-        
+        // Build the Let's Encrypt SSL certificate for the user.
+        public function build_le_cert( $user ) {
+            global $hcpp;
+            $domain = $this->get_base_domain();
+
+            // Check if the LE certificate already exists.
+            if ( file_exists( "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem" ) ) {
+                return;
+            }
+            $ip = array_key_first(
+                json_decode( shell_exec( '/usr/local/hestia/bin/v-list-user-ips ' . $user . ' json' ), true ) 
+            );
+
+            // Get the admin user email address
+            $email = trim( shell_exec( '/usr/local/hestia/bin/v-list-user admin json' ) );
+            $email = json_decode( $email, true, 512, JSON_THROW_ON_ERROR )['admin']['CONTACT'];
+
+            // Swap out nginx.conf and nginx.ssl.conf files to use the LE webroot
+            $ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf";
+            $conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.conf";
+            $ssl_sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.sav";
+            $sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.sav";
+            rename( $ssl_conf, $ssl_sav );
+            rename( $conf, $sav );
+
+            // Create empty nginx.ssl.conf file
+            touch( $ssl_conf );
+            
+            // Create nginx.conf that serves up le-webroot folder
+            mkdir( "/home/$user/conf/web/vscode-$user.$domain/le-webroot", 0755, true );
+            mkdir( "/home/$user/conf/web/vscode-$user.$domain/ssl", 0755, true );
+            $content = 'server {
+                listen      %ip%:80;
+                server_name vscode-%user%.%domain% ;
+                location / {
+                    root /home/%user%/conf/web/vscode-%user%.%domain%/le-webroot;
+                    index index.html index.htm;
+                }
+            }';
+            file_put_contents( $conf, str_replace( 
+                ['%ip%', '%user%', '%domain%'],
+                [$ip, $user, $domain],
+                $content
+            ) );
+
+            // Restart nginx to serve up the le-webroot folder
+            shell_exec( 'service nginx restart' );
+
+            // Use certbot to generate the LE certificate
+            $cmd = "certbot certonly --webroot -w /home/$user/conf/web/vscode-$user.$domain/le-webroot -d vscode-$user.$domain --email $email --agree-tos --non-interactive";
+            $cmd = $hcpp->do_action( 'vscode_build_le_cert', $cmd );
+            exec( $cmd, $output, $return_var );
+            if ( $return_var !== 0 ) {
+                $hcpp->log("Failed to generate LE certificate: " . implode("\n", $output));
+            } else {
+
+                // Link to the LE certificate and key
+                $cert_file = "/etc/letsencrypt/live/vscode-$user.$domain/fullchain.pem";
+                $key_file = "/etc/letsencrypt/live/vscode-$user.$domain/privkey.pem";
+                $cert_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
+                $key_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.key";
+                symlink( $cert_file, $cert_link );
+                symlink( $key_file, $key_link );
+            }
+
+            // Restore the original nginx.conf and nginx.ssl.conf files
+            if ( file_exists( $ssl_conf ) ) unlink( $ssl_conf );
+            rename( $ssl_sav, $ssl_conf );
+            if ( file_exists( $conf ) ) unlink( $conf );
+            rename( $sav, $conf );
+        }
 
         // Delete the NGINX configuration reference and server when the user is deleted.
         public function priv_delete_user( $args ) {
