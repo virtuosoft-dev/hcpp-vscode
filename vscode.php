@@ -196,8 +196,8 @@
             }
 
             // Create the password file.
-            $pw_hash = trim( shell_exec( "grep '^$user:' /etc/shadow" ) );
-            file_put_contents( "/home/$user/conf/web/vscode-$user.$domain/.htpasswd", $pw_hash );
+            // $pw_hash = trim( shell_exec( "grep '^$user:' /etc/shadow" ) );
+            // file_put_contents( "/home/$user/conf/web/vscode-$user.$domain/.htpasswd", $pw_hash );
 
             // Create the nginx.conf file.
             $conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.conf";
@@ -208,11 +208,11 @@
                 $content
             );
 
-            // Uncomment basic auth for non-Devstia Personal Web edition.
-            if ( !property_exists( $hcpp, 'dev_pw' ) ) {
-                $content = str_replace( "#auth_basic", "auth_basic", $content );
-            }
-            file_put_contents( $conf, $content );
+            // // Uncomment basic auth for non-Devstia Personal Web edition.
+            // if ( !property_exists( $hcpp, 'dev_pw' ) ) {
+            //     $content = str_replace( "#auth_basic", "auth_basic", $content );
+            // }
+            // file_put_contents( $conf, $content );
 
             // Create the nginx.ssl.conf file.
             $ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf";
@@ -223,11 +223,11 @@
                 $content
             );
 
-            // Uncomment basic auth on SSL for non-Devstia Personal Web edition.
-            if ( !property_exists( $hcpp, 'dev_pw' ) ) {
-                $content = str_replace( "#auth_basic", "auth_basic", $content );
-            }
-            file_put_contents( $ssl_conf, $content );
+            // // Uncomment basic auth on SSL for non-Devstia Personal Web edition.
+            // if ( !property_exists( $hcpp, 'dev_pw' ) ) {
+            //     $content = str_replace( "#auth_basic", "auth_basic", $content );
+            // }
+            // file_put_contents( $ssl_conf, $content );
 
             // Generate website cert if it doesn't exist for Devstia Personal Web edition.
             if ( property_exists( $hcpp, 'dev_pw' ) ) {
@@ -241,7 +241,7 @@
                 $content = "return 301 https://\$host\$request_uri;";
                 file_put_contents( $force_ssl_conf, $content );
 
-                // TODO: support for LE
+                
             }
 
             // Create the nginx.conf configuration symbolic links.
@@ -266,6 +266,8 @@
             $cmd = $hcpp->do_action( 'vscode_nodejs_cmd', $cmd );
             shell_exec( $cmd );
         }
+
+        
 
         // Delete the NGINX configuration reference and server when the user is deleted.
         public function priv_delete_user( $args ) {
@@ -300,6 +302,11 @@
             $cmd = "echo \"$token\" > \/home\/$user\/.openvscode-server\/data\/token && ";
             $cmd .= "chown $user:$user \/home\/$user\/.openvscode-server\/data\/token && ";
             $cmd .= "chmod 600 \/home\/$user\/.openvscode-server\/data\/token";
+
+            // TODO: Find vscode instance for the given user and restart it.
+            // IE: via ps aux | grep "/opt/vscode/node /opt/vscode/out/server-main.js" | grep devstia
+            // TODO: invoke update_token for the given user on hestia logout.
+
             $cmd = $hcpp->do_action( 'vscode_update_token', $cmd );
             $hcpp->log( shell_exec( $cmd ) );
         }
