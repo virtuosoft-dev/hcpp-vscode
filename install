@@ -1,6 +1,13 @@
 #!/bin/bash
 export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
 
+############################################
+# Install Certbot if dev-pw plugin exists
+############################################
+if [ -d "/usr/local/hestia/plugins/dev-pw" ]; then
+    apt-get install -qq certbot
+fi
 
 ############################################
 # Install Xdebug
