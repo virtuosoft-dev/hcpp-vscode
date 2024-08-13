@@ -207,12 +207,7 @@
                 [$ip, $user, $domain, $port],
                 $content
             );
-
-            // // Uncomment basic auth for non-Devstia Personal Web edition.
-            // if ( !property_exists( $hcpp, 'dev_pw' ) ) {
-            //     $content = str_replace( "#auth_basic", "auth_basic", $content );
-            // }
-            // file_put_contents( $conf, $content );
+            file_put_contents( $conf, $content );
 
             // Create the nginx.ssl.conf file.
             $ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf";
@@ -222,12 +217,7 @@
                 [$ip, $user, $domain, $port],
                 $content
             );
-
-            // // Uncomment basic auth on SSL for non-Devstia Personal Web edition.
-            // if ( !property_exists( $hcpp, 'dev_pw' ) ) {
-            //     $content = str_replace( "#auth_basic", "auth_basic", $content );
-            // }
-            // file_put_contents( $ssl_conf, $content );
+            file_put_contents( $ssl_conf, $content );
 
             // Generate website cert if it doesn't exist for Devstia Personal Web edition.
             if ( property_exists( $hcpp, 'dev_pw' ) ) {
