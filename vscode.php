@@ -374,6 +374,13 @@
 
         // Add VSCode Server icon to our web domain list and button to domain edit pages.
         public function hcpp_render_body( $args ) {
+
+            // Only for bash shell user
+            global $hcpp;
+            $user = trim( $args['user'], "'" );
+            $shell = $hcpp->run( "list-user $user json" )[$user]['SHELL'];
+            if ( $shell !== 'bash' ) return $args;
+
             if ( $args['page'] == 'list_web' ) {
                 $args = $this->render_list_web( $args );
             }
