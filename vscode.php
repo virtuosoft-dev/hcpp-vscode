@@ -378,9 +378,12 @@
             // Find the node vscode pid for the given user
             $cmd = "ps axo user:20,pid,args | grep \"/opt/vscode/node /opt/vscode/out/server-main.js\" | grep $user | awk '{print $2}'";
             $pid = trim( shell_exec( $cmd ) );
-
+            
             // Restart the vscode server for the given user
             if ( $pid ) {
+
+                // Turn $pid into space separated list of pids to kill them all
+                $pid = str_replace( PHP_EOL, ' ', $pid );
                 shell_exec( "kill $pid" );
 
                 // Restart the VSCode service manually (outside of PM2).
