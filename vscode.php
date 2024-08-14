@@ -22,12 +22,21 @@
             $hcpp->add_action( 'post_change_user_shell', [ $this, 'post_change_user_shell' ] );
             $hcpp->add_action( 'hcpp_invoke_plugin', [ $this, 'hcpp_invoke_plugin' ] );
             $hcpp->add_action( 'post_delete_user', [ $this, 'post_delete_user' ] );
+            $hcpp->add_action( 'priv_log_user_logout', [ $this, 'priv_log_user_logout' ] );
             $hcpp->add_action( 'priv_delete_user', [ $this, 'priv_delete_user' ] );
             $hcpp->add_action( 'post_add_user', [ $this, 'post_add_user' ] );
             $hcpp->add_action( 'hcpp_rebooted', [ $this, 'hcpp_rebooted' ] );
             $hcpp->add_action( 'hcpp_plugin_disabled', [ $this, 'hcpp_plugin_disabled' ] );
             $hcpp->add_action( 'hcpp_plugin_enabled', [ $this, 'hcpp_plugin_enabled' ] );
             $hcpp->add_action( 'hcpp_render_body', [ $this, 'hcpp_render_body' ] );
+        }
+
+        // Regenerate the VSCode token and restart the VSCode server on logout.
+        public function priv_log_user_logout( $args ) {
+            global $hcpp;
+            $user = $args[0];
+            $this->update_token( $user );
+            return $args;
         }
 
         // Stop services on plugin disabled.
@@ -363,13 +372,25 @@
             $cmd = "echo \"$token\" > \/home\/$user\/.openvscode-server\/data\/token && ";
             $cmd .= "chown $user:$user \/home\/$user\/.openvscode-server\/data\/token && ";
             $cmd .= "chmod 600 \/home\/$user\/.openvscode-server\/data\/token";
-
-            // TODO: Find vscode instance for the given user and restart it.
-            // IE: via ps aux | grep "/opt/vscode/node /opt/vscode/out/server-main.js" | grep devstia
-            // TODO: invoke update_token for the given user on hestia logout.
-
             $cmd = $hcpp->do_action( 'vscode_update_token', $cmd );
             $hcpp->log( shell_exec( $cmd ) );
+            
+            // Find the node vscode pid for the given user
+            $cmd = "ps axo user:20,pid,args | grep \"/opt/vscode/node /opt/vscode/out/server-main.js\" | grep $user | awk '{print $2}'";
+            $pid = trim( shell_exec( $cmd ) );
+
+            // Restart the vscode server for the given user
+            if ( $pid ) {
+                shell_exec( "kill $pid" );
+
+                // Restart the VSCode service manually (outside of PM2).
+                $port = $hcpp->allocate_port( 'vscode', $user );
+                $cmd = 'runuser -l ' . $user . ' -c "';
+                $cmd .= "(/opt/vscode/node /opt/vscode/out/server-main.js --port $port) > /dev/null 2>&1 &";
+                $cmd .= '"';
+                $cmd = $hcpp->do_action( 'vscode_nodejs_restart_cmd', $cmd );
+                $hcpp->log( shell_exec( $cmd ) );
+            }
         }
 
         // Add VSCode Server icon to our web domain list and button to domain edit pages.
