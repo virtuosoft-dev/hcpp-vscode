@@ -3,73 +3,107 @@
  * Extend the HestiaCP Pluginable object with our VSCode object for
  * allocating VSCode Server instances per user account.
  * 
- * @version 1.0.0
  * @license GPL-3.0
  * @link https://github.com/virtuosoft-dev/hcpp-vscode
  * 
  */
 
- if ( ! class_exists( 'VSCode' ) ) {
+if ( ! class_exists( 'VSCode' ) ) {
     class VSCode {
+
+        /**
+         * Build the Let's Encrypt SSL certificate for the user.
+         * @param string $user The user account to generate the certificate for
+         * @return void
+         */
+        public function build_le_cert( $user ) {
+            global $hcpp;
+            $domain = $this->get_base_domain();
+
+            // Check if the LE certificate already exists.
+            if ( file_exists( "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem" ) ) {
+                return;
+            }
+            $ip = array_key_first( $hcpp->run( "list-user-ips $user json" ) );
+
+            // Get the admin user email address
+            $email = trim( $hcpp->run( 'list-user admin json' )['admin']['CONTACT'] );
+
+            // Swap out nginx.conf and nginx.ssl.conf files to use the LE webroot
+            $ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf";
+            $conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.conf";
+            $ssl_sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.sav";
+            $sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.sav";
+            rename( $ssl_conf, $ssl_sav );
+            rename( $conf, $sav );
+
+            // Create empty nginx.ssl.conf file
+            touch( $ssl_conf );
+            
+            // Create nginx.conf that serves up le-webroot folder
+            mkdir( "/home/$user/conf/web/vscode-$user.$domain/le-webroot", 0755, true );
+            mkdir( "/home/$user/conf/web/vscode-$user.$domain/ssl", 0755, true );
+            $content = 'server {
+                listen      %ip%:80;
+                server_name vscode-%user%.%domain% ;
+                location / {
+                    root /home/%user%/conf/web/vscode-%user%.%domain%/le-webroot;
+                    index index.html index.htm;
+                }
+            }';
+            file_put_contents( $conf, str_replace( 
+                ['%ip%', '%user%', '%domain%'],
+                [$ip, $user, $domain],
+                $content
+            ) );
+
+            // Restart nginx to serve up the le-webroot folder
+            shell_exec( 'service nginx restart' );
+
+            // Use certbot to generate the LE certificate
+            $cmd = "certbot certonly --webroot -w /home/$user/conf/web/vscode-$user.$domain/le-webroot -d vscode-$user.$domain --email $email --agree-tos --non-interactive";
+            $cmd = $hcpp->do_action( 'vscode_build_le_cert', $cmd );
+            exec( $cmd, $output, $return_var );
+            if ( $return_var !== 0 ) {
+                $hcpp->log("Failed to generate LE certificate: " . implode("\n", $output));
+            } else {
+
+                // Link to the LE certificate and key
+                $cert_file = "/etc/letsencrypt/live/vscode-$user.$domain/fullchain.pem";
+                $key_file = "/etc/letsencrypt/live/vscode-$user.$domain/privkey.pem";
+                $cert_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
+                $key_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.key";
+                symlink( $cert_file, $cert_link );
+                symlink( $key_file, $key_link );
+            }
+
+            // Restore the original nginx.conf and nginx.ssl.conf files
+            if ( file_exists( $ssl_conf ) ) unlink( $ssl_conf );
+            rename( $ssl_sav, $ssl_conf );
+            if ( file_exists( $conf ) ) unlink( $conf );
+            rename( $sav, $conf );
+        }
 
         /**
          * Constructor, listen for add, update, or remove users.
          */
         public function __construct() {
             global $hcpp;
-            $hcpp->webdav = $this;
+            $hcpp->vscode = $this;
             $hcpp->add_action( 'dev_pw_generate_website_cert', [ $this, 'dev_pw_generate_website_cert' ] );
-            $hcpp->add_action( 'post_change_user_shell', [ $this, 'post_change_user_shell' ] );
-            $hcpp->add_action( 'hcpp_invoke_plugin', [ $this, 'hcpp_invoke_plugin' ] );
-            $hcpp->add_action( 'post_delete_user', [ $this, 'post_delete_user' ] );
-            $hcpp->add_action( 'priv_log_user_logout', [ $this, 'priv_log_user_logout' ] );
-            $hcpp->add_action( 'priv_delete_user', [ $this, 'priv_delete_user' ] );
-            $hcpp->add_action( 'post_add_user', [ $this, 'post_add_user' ] );
-            $hcpp->add_action( 'hcpp_rebooted', [ $this, 'hcpp_rebooted' ] );
             $hcpp->add_action( 'hcpp_plugin_disabled', [ $this, 'hcpp_plugin_disabled' ] );
-            $hcpp->add_action( 'hcpp_plugin_enabled', [ $this, 'hcpp_plugin_enabled' ] );
+            $hcpp->add_action( 'priv_log_user_logout', [ $this, 'priv_log_user_logout' ] );
+            //$hcpp->add_action( 'priv_log_user_login', [ $this, 'priv_log_user_login' ] );
+            $hcpp->add_action( 'priv_update_sys_rrd', [ $this, 'priv_update_sys_rrd' ] ); // Every 5 minutes
+            $hcpp->add_action( 'hcpp_invoke_plugin', [ $this, 'hcpp_invoke_plugin' ] );
             $hcpp->add_action( 'hcpp_render_body', [ $this, 'hcpp_render_body' ] );
         }
 
-        // Regenerate the VSCode token and restart the VSCode server on logout.
-        public function priv_log_user_logout( $args ) {
-            global $hcpp;
-            $user = $args[0];
-            $this->update_token( $user );
-            return $args;
-        }
-
-        // Stop services on plugin disabled.
-        public function hcpp_plugin_disabled( $plugin ) {
-            if ( $plugin !== 'vscode' ) return $plugin;
-
-            // Gather list of all users
-            $cmd = "/usr/local/hestia/bin/v-list-users json";
-            $result = shell_exec( $cmd );
-            try {
-                $result = json_decode( $result, true, 512, JSON_THROW_ON_ERROR );
-            } catch (Exception $e) {
-                var_dump( $e );
-                return $plugin;
-            }
-            
-            // Remove VSCode for each valid user
-            foreach( $result as $key=> $value ) {
-                if ( $key === 'admin') continue;
-                if ( $value['SHELL'] !== 'bash' ) continue;
-                unlink( "/home/$key/.openvscode-server/data/token" );
-            }
-            $this->stop();
-            return $plugin;
-        }
-
-        // Start services on plugin enabled.
-        public function hcpp_plugin_enabled( $plugin ) {
-            if ( $plugin == 'vscode' ) $this->start();
-            return $plugin;
-        }
-
-        // Intercept the certificate generation and copy over ssl certs for the vscode domain.
+        /**
+         * Intercept the certificate generation and copy over ssl certs for the vscode domain.
+         * @param string $cmd The command to generate the website certificate
+         * @return string The modified command
+         */
         public function dev_pw_generate_website_cert( $cmd ) {
             if ( strpos( $cmd, '/vscode-' ) !== false && strpos( $cmd, '/dev_pw_ssl && ') !== false ) {
                 
@@ -85,24 +119,99 @@
             return $cmd;
         }
 
-        // Setup VSCode for all users on reboot.
-        public function hcpp_rebooted() {
-            $this->start();
-        }
-
-        // Respond to invoke-plugin vscode_restart and vscode_get_token requests.
+        /**
+         * Invoke a plugin action.
+         * @param array $args The arguments passed to the invoke-plugin hook
+         * @return array The modified arguments
+         */
         public function hcpp_invoke_plugin( $args ) {
-            if ( $args[0] === 'vscode_restart' ) {
-                $this->restart();
-            }
-            if ( $args[0] === 'vscode_get_token' ) {
+            $action = $args[0];
+            if ( $action === 'vscode_get_token' ) {
                 $user = $args[1];
                 echo file_get_contents( "/home/$user/.openvscode-server/data/token" );
+            }
+            if ( $action === 'vscode_startup' ) {
+                $user = $args[1];
+                $this->startup( $user );
+            }
+            return $args;
+        }
+                
+        /**
+         * Stop all VSCode servers for all users on plugin disabled.
+         */
+        public function hcpp_plugin_disabled( $plugin ) {
+            global $hcpp;
+            if ( $plugin !== 'vscode' ) return $plugin;
+
+            // Stop VSCode for each valid user
+            $users = $this->get_bash_users();
+            foreach( $users as $user ) {
+                $this->stop( $user );
+            }
+
+            // Remove service link and reload nginx
+            $cmd = '(rm -f /etc/nginx/conf.d/domains/vscode-* ; sleep 3 ; service nginx restart) > /dev/null 2>&1 &';
+            $cmd = $hcpp->do_action( 'vscode_nginx_restart', $cmd );
+            shell_exec( $cmd );
+            return $plugin;
+        }
+
+        /**
+         * Shutdown the VSCode server for the given user on logout.
+         */
+        function priv_log_user_logout( $args ) {
+            $user = $args[0];
+            $this->stop( $user );
+            return $args;
+        }
+
+        /**
+         * Start the VSCode server for the given logged in user.
+         */
+        // function priv_log_user_login( $args ) {
+        //     global $hcpp;
+        //     $user = $args[0];
+        //     $state = $args[2];
+        //     if ( $state !== 'success' ) {
+        //         $hcpp->log( "VSCode: Failed login for $user" );
+        //         return $args;
+        //     }
+
+        //     // Check if user has bash shell access
+        //     $shell = $hcpp->run( "list-user $user json" )[$user]['SHELL'];
+        //     if ( $shell !== 'bash' ) {
+        //         $hcpp->log( "VSCode: $user does not have bash shell access" );
+        //         return $args;
+        //     }
+
+        //     // Startup VSCode for the user
+        //     $this->startup( $user );
+        //     return $args;
+        // }
+
+        /**
+         * Shutdown the VSCode server for inactive users. Runs every 5 minutes.
+         */
+        function priv_update_sys_rrd( $args ) {
+            global $hcpp;
+            $users = $this->get_bash_users();
+            foreach( $users as $user ) {
+                if ( file_exists( "/home/$user/.openvscode-server/data/token" ) ) {
+                    $file = $this->get_most_recently_modified_file( "/home/$user/.openvscode-server/data" );
+                    if ( $file && $file['age_in_minutes'] > 15 ) {
+                        $hcpp->log( "Stopping VSCode for $user due to inactivity" );
+                        $this->stop( $user );
+                    }
+                }
             }
             return $args;
         }
 
-        // Get the base domain; cache it for future use.
+        /**
+         * Get the base domain; cache it for future use.
+         * @return string The base domain
+         */ 
         public function get_base_domain() {
             global $hcpp;
 
@@ -113,88 +222,98 @@
             return $hcpp->domain;
         }
 
-        // Restart VSCode services when user added.
-        public function post_add_user( $args ) {
+        /** 
+         * Get list of all bash shell users except the admin user.
+         * @return array The list of bash shell users
+         */
+        public function get_bash_users() {
             global $hcpp;
-            $hcpp->log( $hcpp->run( 'invoke-plugin vscode_restart' ) );
-            return $args;
-        }
 
-        // Restart VSCode services when shell changes.
-        public function post_change_user_shell( $args ) {
-            global $hcpp;
-            $hcpp->log( $hcpp->run( 'invoke-plugin vscode_restart' ) );
-            return $args;
-        }
-
-        // Restart VSCode services.
-        public function restart() {
-            $this->stop();
-            $this->start();
-        }
-
-        // Start all VSCode services.
-        public function start() {
-            
             // Gather list of all users
             $cmd = "/usr/local/hestia/bin/v-list-users json";
             $result = shell_exec( $cmd );
             try {
                 $result = json_decode( $result, true, 512, JSON_THROW_ON_ERROR );
             } catch (Exception $e) {
-                var_dump( $e );
-                return;
+                $hcpp->log( "vscode->get_bash_users failed decoding JSON" );
+                $hcpp->log( $e );
             }
-            
-            // Setup VSCode for each valid user
+
+            // Stop VSCode for each valid user
+            $users = [];
             foreach( $result as $key=> $value ) {
                 if ( $key === 'admin') continue;
                 if ( $value['SHELL'] !== 'bash' ) continue;
-                $this->setup( $key );
+                $users[] = $key;
             }
-
-            // Reload nginx
-            global $hcpp;
-            $cmd = '(service nginx restart) > /dev/null 2>&1 &';
-            $cmd = $hcpp->do_action( 'vscode_nginx_restart', $cmd );
-            shell_exec( $cmd );
+            return $users;
         }
 
-        // Stop all VSCode services.
-        public function stop() {
+        /**
+         * Get the most recently modified file and its age in minutes
+         * within the given base path, limited to specific file extensions.
+         *
+         * @param string $base_path The base path to search for files
+         * @return array|null An array containing the file path and its age in minutes, or null if no files are found
+         */
+        public function get_most_recently_modified_file( $base_path ) {
+            if ( !is_dir( $base_path ) ) {
+                return null;
+            }
+
+            $most_recent_file = null;
+            $most_recent_time = 0;
+
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator( $base_path, RecursiveDirectoryIterator::SKIP_DOTS ),
+                RecursiveIteratorIterator::CHILD_FIRST
+            );
+
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $file_mtime = $file->getMTime();
+                    if ($file_mtime > $most_recent_time) {
+                        $most_recent_time = $file_mtime;
+                        $most_recent_file = $file->getPathname();
+                    }
+                }
+            }
+
+            if ($most_recent_file) {
+                $current_time = time();
+                $age_in_minutes = ($current_time - $most_recent_time) / 60;
+                return [
+                    'file' => $most_recent_file,
+                    'age_in_minutes' => round($age_in_minutes)
+                ];
+            }
+
+            return null;
+        }
+
+        /**
+         * Start VSCode for the user.
+         * @param string $user The user account to start VSCode for
+         * @return void
+         */
+        public function startup( $user ) {
+            global $hcpp;
+
+            // Check for existing instance of VSCode's "server-main.js" for the user.
+            $cmd = "ps axo user:20,pid,args | grep \"/opt/vscode/node /opt/vscode/out/server-main.js\" | grep $user | grep -v grep | awk '{print $2}'";
+            $pid = trim( shell_exec( $cmd ) );
             
-            // Find all node vscode processes
-            $cmd = 'ps ax | grep "/opt/vscode/node /opt/vscode/out/server-main.js" | grep -v grep';
-            $processes = explode( PHP_EOL, shell_exec( $cmd ) );
-
-            // Loop through each process and extract the process ID (PID)
-            foreach ($processes as $process) {
-                $pid = preg_replace('/^\s*(\d+).*$/', '$1', $process);
-
-                // Kill the process
-                shell_exec( "kill $pid" );
-
-                global $hcpp;
-                $hcpp->log( "Killed node vscode process $pid" );
+            // Start the vscode server for the given user if not already running.
+            if ( $pid ) {
+                $hcpp->log( "VSCode server $pid, already running for $user" );
+                touch( "/home/$user/.openvscode-server/data/token" ); // Keep idle server alive
+                return;
             }
-
-            // Remove service link and reload nginx
-            global $hcpp;
-            $cmd = '(rm -f /etc/nginx/conf.d/domains/vscode-* ; service nginx restart) > /dev/null 2>&1 &';
-            $cmd = $hcpp->do_action( 'vscode_nginx_restart', $cmd );
-            shell_exec( $cmd );
-        }
-
-        // Setup VSCode for user.
-        public function setup( $user ) {
-            global $hcpp;
             $hcpp->log( "Setting up VSCode for $user" );
             $domain = $this->get_base_domain();
 
             // Get user account first IP address.
-            $ip = array_key_first(
-                json_decode( shell_exec( '/usr/local/hestia/bin/v-list-user-ips ' . $user . ' json' ), true ) 
-            );
+            $ip = array_key_first( $hcpp->run( "list-user-ips $user json" ) );
 
             // Get a port for the VSCode service.
             $port = $hcpp->allocate_port( 'vscode', $user );
@@ -203,10 +322,6 @@
             if ( ! is_dir( "/home/$user/conf/web/vscode-$user.$domain" ) ) {
                 mkdir( "/home/$user/conf/web/vscode-$user.$domain" );
             }
-
-            // Create the password file.
-            // $pw_hash = trim( shell_exec( "grep '^$user:' /etc/shadow" ) );
-            // file_put_contents( "/home/$user/conf/web/vscode-$user.$domain/.htpasswd", $pw_hash );
 
             // Create the nginx.conf file.
             $conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.conf";
@@ -265,84 +380,32 @@
             $cmd .= '"';
             $cmd = $hcpp->do_action( 'vscode_nodejs_cmd', $cmd );
             shell_exec( $cmd );
+
+            // Reload nginx
+            $cmd = '(service nginx restart) > /dev/null 2>&1 &';
+            $cmd = $hcpp->do_action( 'vscode_nginx_restart', $cmd );
+            shell_exec( $cmd );
         }
 
-        // Build the Let's Encrypt SSL certificate for the user.
-        public function build_le_cert( $user ) {
+        /**
+         * Stop the VSCode server for the given user.
+         * @param string $user The user account to stop VSCode for
+         * @return void
+         */
+        public function stop( $user ) {
             global $hcpp;
-            $domain = $this->get_base_domain();
 
-            // Check if the LE certificate already exists.
-            if ( file_exists( "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem" ) ) {
-                return;
-            }
-            $ip = array_key_first(
-                json_decode( shell_exec( '/usr/local/hestia/bin/v-list-user-ips ' . $user . ' json' ), true ) 
-            );
-
-            // Get the admin user email address
-            $email = trim( shell_exec( '/usr/local/hestia/bin/v-list-user admin json' ) );
-            $email = json_decode( $email, true, 512, JSON_THROW_ON_ERROR )['admin']['CONTACT'];
-
-            // Swap out nginx.conf and nginx.ssl.conf files to use the LE webroot
-            $ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf";
-            $conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.conf";
-            $ssl_sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.sav";
-            $sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.sav";
-            rename( $ssl_conf, $ssl_sav );
-            rename( $conf, $sav );
-
-            // Create empty nginx.ssl.conf file
-            touch( $ssl_conf );
-            
-            // Create nginx.conf that serves up le-webroot folder
-            mkdir( "/home/$user/conf/web/vscode-$user.$domain/le-webroot", 0755, true );
-            mkdir( "/home/$user/conf/web/vscode-$user.$domain/ssl", 0755, true );
-            $content = 'server {
-                listen      %ip%:80;
-                server_name vscode-%user%.%domain% ;
-                location / {
-                    root /home/%user%/conf/web/vscode-%user%.%domain%/le-webroot;
-                    index index.html index.htm;
+            // Kill all instances of VSCode's /opt/vscode/node interpreter for the user (maybe multiple, orphans)
+            do {
+                $cmd = "ps axo user:20,pid,args | grep \"/opt/vscode/node\" | grep $user | grep -v grep | awk '{print $2}'";
+                $pid = trim( shell_exec( $cmd ) );
+                if ( $pid ) {
+                    shell_exec( "kill $pid" );
+                    $hcpp->log( "Killed node vscode process $pid" );
                 }
-            }';
-            file_put_contents( $conf, str_replace( 
-                ['%ip%', '%user%', '%domain%'],
-                [$ip, $user, $domain],
-                $content
-            ) );
-
-            // Restart nginx to serve up the le-webroot folder
-            shell_exec( 'service nginx restart' );
-
-            // Use certbot to generate the LE certificate
-            $cmd = "certbot certonly --webroot -w /home/$user/conf/web/vscode-$user.$domain/le-webroot -d vscode-$user.$domain --email $email --agree-tos --non-interactive";
-            $cmd = $hcpp->do_action( 'vscode_build_le_cert', $cmd );
-            exec( $cmd, $output, $return_var );
-            if ( $return_var !== 0 ) {
-                $hcpp->log("Failed to generate LE certificate: " . implode("\n", $output));
-            } else {
-
-                // Link to the LE certificate and key
-                $cert_file = "/etc/letsencrypt/live/vscode-$user.$domain/fullchain.pem";
-                $key_file = "/etc/letsencrypt/live/vscode-$user.$domain/privkey.pem";
-                $cert_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
-                $key_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.key";
-                symlink( $cert_file, $cert_link );
-                symlink( $key_file, $key_link );
-            }
-
-            // Restore the original nginx.conf and nginx.ssl.conf files
-            if ( file_exists( $ssl_conf ) ) unlink( $ssl_conf );
-            rename( $ssl_sav, $ssl_conf );
-            if ( file_exists( $conf ) ) unlink( $conf );
-            rename( $sav, $conf );
-        }
-
-        // Delete the NGINX configuration reference and server when the user is deleted.
-        public function priv_delete_user( $args ) {
-            global $hcpp;
-            $user = $args[0];
+            } while ( $pid );
+                                    
+            // Clean up the nginx configuration files.
             $domain = $this->get_base_domain();
             $link = "/etc/nginx/conf.d/domains/vscode-$user.$domain.conf";
             if ( is_link( $link ) ) {
@@ -353,19 +416,17 @@
                 unlink( $link );
             }
 
-            // Delete user port
-            $hcpp->delete_port( 'vscode', $user );
-            return $args;
+            // Remove the token
+            if ( file_exists( "/home/$user/.openvscode-server/data/token" ) ) {
+                shell_exec( "rm -f /home/$user/.openvscode-server/data/token" );
+            }
         }
 
-        // Restart the VSCode service when a user is deleted.
-        public function post_delete_user( $args ) {
-            global $hcpp;
-            $hcpp->log( $hcpp->run( 'invoke-plugin vscode_restart' ) );
-            return $args;
-        }
-
-        // Update the VSCode Server access token
+        /**
+         * Update the VSCode Server access token
+         * @param string $user The user account to update the token for
+         * @return void
+         */ 
         public function update_token( $user ) {
             global $hcpp;
             $token = $hcpp->nodeapp->random_chars( 32 );
@@ -374,38 +435,27 @@
             $cmd .= "chmod 600 \/home\/$user\/.openvscode-server\/data\/token";
             $cmd = $hcpp->do_action( 'vscode_update_token', $cmd );
             $hcpp->log( shell_exec( $cmd ) );
-            
-            // Find the node vscode pid for the given user
-            $cmd = "ps axo user:20,pid,args | grep \"/opt/vscode/node /opt/vscode/out/server-main.js\" | grep $user | awk '{print $2}'";
-            $pid = trim( shell_exec( $cmd ) );
-            
-            // Restart the vscode server for the given user
-            if ( $pid ) {
-
-                // Turn $pid into space separated list of pids to kill them all
-                $pid = str_replace( PHP_EOL, ' ', $pid );
-                shell_exec( "kill $pid" );
-
-                // Restart the VSCode service manually (outside of PM2).
-                $port = $hcpp->allocate_port( 'vscode', $user );
-                $cmd = 'runuser -l ' . $user . ' -c "';
-                $cmd .= "(/opt/vscode/node /opt/vscode/out/server-main.js --port $port) > /dev/null 2>&1 &";
-                $cmd .= '"';
-                $cmd = $hcpp->do_action( 'vscode_nodejs_restart_cmd', $cmd );
-                $hcpp->log( shell_exec( $cmd ) );
-            }
         }
 
-        // Add VSCode Server icon to our web domain list and button to domain edit pages.
+        /**
+         * Add VSCode Server icon to our web domain list and button to domain edit pages.
+         * @param array $args The arguments passed to the render_body hook
+         * @return array The modified arguments
+         */
         public function hcpp_render_body( $args ) {
+            global $hcpp;
 
             // Only for bash shell user
-            global $hcpp;
             $user = trim( $args['user'], "'" );
             $shell = $hcpp->run( "list-user $user json" )[$user]['SHELL'];
             if ( $shell !== 'bash' ) return $args;
-
             if ( $args['page'] == 'list_web' ) {
+
+                // Only start up VSCode for the user if not already running
+                // when they view the web domain list page.
+                if ( !isset( $_GET['quickstart'] ) ) {
+                    $hcpp->run( "invoke-plugin vscode_startup $user" );
+                }
                 $args = $this->render_list_web( $args );
             }
             if ( $args['page'] == 'edit_web' ) {
@@ -414,7 +464,11 @@
             return $args;
         }
 
-        // Add VSCode Server button to our web domain edit page.
+        /**
+         * Add VSCode Server button to our web domain edit page.
+         * @param array $args The arguments passed to the render_body hook
+         * @return array The modified arguments
+         */
         public function render_edit_web( $args ) {
 
                 global $hcpp;
@@ -444,7 +498,11 @@
                 return $args;
         }
 
-        // Add VSCode Server icon to our web domain list page.
+        /**
+         * Add VSCode Server icon to our web domain list page.
+         * @param array $args The arguments passed to the render_body hook
+         * @return array The modified arguments
+         */
         public function render_list_web( $args ) {
             global $hcpp;
             $hcpp->log("vscode render_list_web");
@@ -480,6 +538,6 @@
             $args['content'] = $new;
             return $args;
         }
-    }
+    }   
     new VSCode();
 }
