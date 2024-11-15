@@ -21,8 +21,20 @@ if ( ! class_exists( 'VSCode' ) ) {
             $domain = $this->get_base_domain();
 
             // Check if the LE certificate already exists.
-            if ( file_exists( "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem" ) ) {
-                return;
+            $cert_file = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
+            if ( file_exists( $cert_file ) ) {
+                    // Get the file modification time
+                    $file_mod_time = filemtime($cert_file);
+                    // Get the current time
+                    $current_time = time();
+                    // Calculate the age of the file in days
+                    $file_age_days = ($current_time - $file_mod_time) / (60 * 60 * 24);
+
+                    // Check if the file is less than 90 days old
+                    if ($file_age_days < 90) {
+                        unlink( $cert_file );
+                        return; // The certificate is still valid, no need to renew
+                    }
             }
             $ip = array_key_first( $hcpp->run( "list-user-ips $user json" ) );
 
