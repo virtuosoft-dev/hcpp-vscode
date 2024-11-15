@@ -32,9 +32,9 @@ if ( ! class_exists( 'VSCode' ) ) {
 
                     // Check if the file is less than 90 days old
                     if ($file_age_days < 90) {
-                        unlink( $cert_file );
                         return; // The certificate is still valid, no need to renew
                     }
+                    unlink( $cert_file );
             }
             $ip = array_key_first( $hcpp->run( "list-user-ips $user json" ) );
 
