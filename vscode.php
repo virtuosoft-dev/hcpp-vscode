@@ -53,8 +53,8 @@ if ( ! class_exists( 'VSCode' ) ) {
             touch( $ssl_conf );
             
             // Create nginx.conf that serves up le-webroot folder
-            mkdir( "/home/$user/conf/web/vscode-$user.$domain/le-webroot", 0755, true );
-            mkdir( "/home/$user/conf/web/vscode-$user.$domain/ssl", 0755, true );
+            @mkdir( "/home/$user/conf/web/vscode-$user.$domain/le-webroot", 0755, true );
+            @mkdir( "/home/$user/conf/web/vscode-$user.$domain/ssl", 0755, true );
             $content = 'server {
                 listen      %ip%:80;
                 server_name vscode-%user%.%domain% ;
@@ -85,8 +85,8 @@ if ( ! class_exists( 'VSCode' ) ) {
                 $key_file = "/etc/letsencrypt/live/vscode-$user.$domain/privkey.pem";
                 $cert_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
                 $key_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.key";
-                symlink( $cert_file, $cert_link );
-                symlink( $key_file, $key_link );
+                @symlink( $cert_file, $cert_link );
+                @symlink( $key_file, $key_link );
             }
 
             // Restore the original nginx.conf and nginx.ssl.conf files
