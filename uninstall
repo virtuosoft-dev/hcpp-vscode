@@ -1,29 +1,48 @@
 #!/bin/bash
+export DEBIAN_FRONTEND=noninteractive
 
-rm -rf /etc/php/7.4xdbg
-rm -rf /etc/php/8.0xdbg
-rm -rf /etc/php/8.1xdbg
-rm -rf /etc/php/8.2xdbg
-rm -rf /etc/php/8.3xdbg
+# Kill all processes running /opt/vscode/node
+echo "## Killing all processes running /opt/vscode/node"
+pkill -f "/opt/vscode/node"
 
-rm /etc/init.d/php7.4xdbg-fpm
-rm /etc/init.d/php8.0xdbg-fpm
-rm /etc/init.d/php8.1xdbg-fpm
-rm /etc/init.d/php8.2xdbg-fpm
-rm /etc/init.d/php8.3xdbg-fpm
+uninstall_xdebug() {
+    local version=$1
+    local version_underscore=${version//./_}
 
-rm /lib/systemd/system/php7.4xdbg-fpm.service
-rm /lib/systemd/system/php8.0xdbg-fpm.service
-rm /lib/systemd/system/php8.1xdbg-fpm.service
-rm /lib/systemd/system/php8.2xdbg-fpm.service
-rm /lib/systemd/system/php8.3xdbg-fpm.service
+    echo "## Stop and disable the PHP ${version} Xdebug"
+    systemctl stop php${version}xdbg-fpm
+    systemctl disable php${version}xdbg-fpm
 
-rm /usr/local/hestia/data/templates/web/php-fpm/7.4xdbg.tpl
-rm /usr/local/hestia/data/templates/web/php-fpm/8.0xdbg.tpl
-rm /usr/local/hestia/data/templates/web/php-fpm/8.1xdbg.tpl
-rm /usr/local/hestia/data/templates/web/php-fpm/8.3xdbg.tpl
+    echo "## Remove service files"
+    rm -rf /etc/init.d/php${version}xdbg-fpm
+    rm -rf /lib/systemd/system/php${version}xdbg-fpm.service
 
+    echo "## Uninstall Xdebug for PHP $version"
+    apt-get -qq remove php${version}-xdebug
+
+    echo "## Remove Xdebug profile for PHP $version"
+    rm -rf /etc/php/${version}xdbg
+
+    echo "## Remove template file"
+    rm -rf /usr/local/hestia/data/templates/web/php-fpm/PHP-${version_underscore}xdbg.tpl
+
+}
+uninstall_xdebug 7.4
+uninstall_xdebug 8.0
+uninstall_xdebug 8.1
+uninstall_xdebug 8.2
+uninstall_xdebug 8.3
+
+# Clean up all vscode- user domains
+rm -rf /etc/nginx/conf.d/domains/vscode-*
 rm -rf /opt/vscode
 
-# Clean up all vscode- users
-rm -rf /etc/nginx/conf.d/domains/vscode-*
+if [ -d "/etc/php.pre-xdebug" ]; then
+    rm -rf /etc/php.pre-xdebug
+fi;
+
+# Restart the services
+echo "## Reload systemd manager configuration"
+systemctl daemon-reload
+echo "## Restarting the Nginx service"
+systemctl restart nginx

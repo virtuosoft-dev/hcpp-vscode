@@ -2,78 +2,352 @@
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
 
-############################################
-# Install Certbot if no dev-pw plugin
-############################################
-if [ ! -d "/usr/local/hestia/plugins/dev-pw" ]; then
-    apt-get install -qq certbot
+## Exit if /etc/php.pre-xdebug exists
+if [ -d "/etc/php.pre-xdebug" ]; then
+    echo "## Xdebug is already installed"
+    exit 0
 fi
 
-############################################
-# Install Xdebug
-############################################
+## Backup /etc/php folder
+cp -r /etc/php /etc/php.pre-xdebug
 
-apt-get -qq install php7.4-xdebug
-apt-get -qq install php8.0-xdebug
-apt-get -qq install php8.1-xdebug
-apt-get -qq install php8.2-xdebug
-apt-get -qq install php8.3-xdebug
+# Function to rename symbolic links
+link_rename() {
+    local DIR=$1
+    local OLD_PATTERN=$2
+    local NEW_PATTERN=$3
 
-# Copy PHP profiles to PHP Xdebug versions
-mkdir /etc/php/7.4xdbg
-rsync -a /etc/php/7.4/ /etc/php/7.4xdbg
-rm -rf /etc/php/7.4xdbg/fpm/pool.d
-./link_rename.sh /etc/php/7.4xdbg/fpm/conf.d /etc/php/7.4/ /etc/php/7.4xdbg/
-ln -s /etc/php/7.4xdbg/mods-available/xdebug.ini /etc/php/7.4xdbg/fpm/conf.d/20-xdebug.ini
-mkdir /etc/php/8.0xdbg
-rsync -a /etc/php/8.0/ /etc/php/8.0xdbg
-rm -rf /etc/php/8.0xdbg/fpm/pool.d
-./link_rename.sh /etc/php/8.0xdbg/fpm/conf.d /etc/php/8.0/ /etc/php/8.0xdbg/
-ln -s /etc/php/8.0xdbg/mods-available/xdebug.ini /etc/php/8.0xdbg/fpm/conf.d/20-xdebug.ini
-mkdir /etc/php/8.1xdbg
-rsync -al /etc/php/8.1/ /etc/php/8.1xdbg
-rm -rf /etc/php/8.1xdbg/fpm/pool.d
-./link_rename.sh /etc/php/8.1xdbg/fpm/conf.d /etc/php/8.1/ /etc/php/8.1xdbg/
-ln -s /etc/php/8.1xdbg/mods-available/xdebug.ini /etc/php/8.1xdbg/fpm/conf.d/20-xdebug.ini
-mkdir /etc/php/8.2xdbg
-rsync -al /etc/php/8.2/ /etc/php/8.2xdbg
-rm -rf /etc/php/8.2xdbg/fpm/pool.d
-./link_rename.sh /etc/php/8.2xdbg/fpm/conf.d /etc/php/8.2/ /etc/php/8.2xdbg/
-ln -s /etc/php/8.2xdbg/mods-available/xdebug.ini /etc/php/8.2xdbg/fpm/conf.d/20-xdebug.ini
-mkdir /etc/php/8.3xdbg
-rsync -al /etc/php/8.3/ /etc/php/8.3xdbg
-rm -rf /etc/php/8.3xdbg/fpm/pool.d
-./link_rename.sh /etc/php/8.3xdbg/fpm/conf.d /etc/php/8.3/ /etc/php/8.3xdbg/
-ln -s /etc/php/8.3xdbg/mods-available/xdebug.ini /etc/php/8.3xdbg/fpm/conf.d/20-xdebug.ini
+    find "$DIR" -type l | while read -r line; do
+        echo "Processing: $line"
+        CUR_LINK_PATH="$(readlink "$line")"
+        if [ -z "$CUR_LINK_PATH" ]; then
+            echo "Error: Unable to read link target for $line"
+            continue
+        fi
+        NEW_LINK_PATH="${CUR_LINK_PATH/$OLD_PATTERN/$NEW_PATTERN}"
+        if [ "$CUR_LINK_PATH" != "$NEW_LINK_PATH" ]; then
+            rm "$line"
+            if [ $? -ne 0 ]; then
+                echo "Error: Failed to remove $line"
+                continue
+            fi
+            ln -s "$NEW_LINK_PATH" "$line"
+            if [ $? -ne 0 ]; then
+                echo "Error: Failed to create symbolic link $line -> $NEW_LINK_PATH"
+                continue
+            fi
+            echo "Updated: $line -> $NEW_LINK_PATH"
+        else
+            echo "No change needed for: $line"
+        fi
+    done
+}
 
-# Remove xdebug from plain PHP versions
-rm -f /etc/php/7.4/fpm/conf.d/20-xdebug.ini
-rm -f /etc/php/8.0/fpm/conf.d/20-xdebug.ini
-rm -f /etc/php/8.1/fpm/conf.d/20-xdebug.ini
-rm -f /etc/php/8.2/fpm/conf.d/20-xdebug.ini
-rm -f /etc/php/8.3/fpm/conf.d/20-xdebug.ini
-rsync -r ./src/etc/php/ /etc/php/
-rsync -r ./src/etc/init.d/ /etc/init.d/
-rsync -r ./src/lib/systemd/system/ /lib/systemd/system/
+# Function to install and configure Xdebug for a specific PHP version
+install_xdebug() {
+    local version=$1
+    local version_no_dot=${version//./}
+    local version_underscore=${version//./_}
+    local port="96${version_no_dot}"
 
-# Allow execute
-chmod +x /etc/init.d/php7.4xdbg-fpm
-chmod +x /etc/init.d/php8.0xdbg-fpm
-chmod +x /etc/init.d/php8.1xdbg-fpm
-chmod +x /etc/init.d/php8.2xdbg-fpm
-chmod +x /etc/init.d/php8.3xdbg-fpm
+    echo "## Install Xdebug for PHP $version"
+    apt-get -qq install php${version}-xdebug
 
-# Add to auto start
-systemctl enable php7.4xdbg-fpm
-systemctl enable php8.0xdbg-fpm
-systemctl enable php8.1xdbg-fpm
-systemctl enable php8.2xdbg-fpm
-systemctl enable php8.3xdbg-fpm
+    echo "## Make Xdebug profile for PHP $version"
+    mv /etc/php/${version} /etc/php/${version}xdbg
+    link_rename /etc/php/${version}xdbg /etc/php/${version}/ /etc/php/${version}xdbg/
+    cp -r /etc/php.pre-xdebug/${version} /etc/php/${version}
 
+    ## Clean pool.d folder of existing configurations
+    rm -rf /etc/php/${version}xdbg/fpm/pool.d/*
+
+    ## Write a dummy pool configuration file
+    echo "## Write dummy.conf for PHP $version"
+    cat <<EOF > /etc/php/${version}xdbg/fpm/pool.d/dummy.conf
+; origin-src: deb/php-fpm/dummy.conf
+
+[www]
+listen = 127.0.0.1:$port
+listen.allowed_clients = 127.0.0.1
+
+user = www-data
+group = www-data
+
+pm = ondemand
+pm.max_children = 4
+pm.max_requests = 4000
+pm.process_idle_timeout = 10s
+EOF
+
+    ## Write php-fpm.conf configuration file
+    echo "## Write php-fpm.conf for PHP $version"
+    cat <<EOF > /etc/php/${version}xdbg/fpm/php-fpm.conf
+[global]
+pid = /run/php/php${version}xdbg-fpm.pid
+error_log = /var/log/php${version}xdbg-fpm.log
+log_level = error
+emergency_restart_threshold = 10
+emergency_restart_interval = 60s
+process_control_timeout = 10s
+events.mechanism = epoll
+include=/etc/php/${version}xdbg/fpm/pool.d/*.conf
+EOF
+
+    ## Write xdebug.ini file
+    echo "## Write xdebug.ini"
+    cat <<EOF > /etc/php/${version}xdbg/mods-available/xdebug.ini
+zend_extension=xdebug.so
+xdebug.start_with_request=yes
+xdebug.mode=debug
+xdebug.client_host=localhost
+EOF
+
+    ## Write php service file
+    echo "## Write the php service file"
+    cat <<EOF > /lib/systemd/system/php${version}xdbg-fpm.service
+[Unit]
+Description=The PHP ${version} Xdebug FastCGI Process Manager
+Documentation=man:php-fpm${version}(8)
+After=network.target
+
+[Service]
+Type=notify
+Environment=PHPRC=/etc/php/${version}xdbg/fpm
+Environment=PHP_INI_SCAN_DIR=/etc/php/${version}xdbg/fpm/conf.d
+ExecStart=/usr/sbin/php-fpm${version} --nodaemonize --fpm-config /etc/php/${version}xdbg/fpm/php-fpm.conf
+ExecStartPost=-/usr/lib/php/php-fpm-socket-helper install /run/php/php-fpm.sock /etc/php/${version}xdbg/fpm/pool.d/www.conf ${version_no_dot}
+ExecStopPost=-/usr/lib/php/php-fpm-socket-helper remove /run/php/php-fpm.sock /etc/php/${version}xdbg/fpm/pool.d/www.conf ${version_no_dot}
+ExecReload=/bin/kill -USR2 $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+
+EOF
+
+## Write init.d file
+    echo "## Write the init.d file"
+    cat <<EOF > /etc/init.d/php${version}xdbg-fpm
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides:          php${version}xdbg-fpm
+# Required-Start:    \$remote_fs \$network
+# Required-Stop:     \$remote_fs \$network
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts php${version}xdbg-fpm
+# Description:       Starts The PHP Xdebug FastCGI Process Manager Daemon
+### END INIT INFO
+
+# Author: Stephen J. Carnam <steveorevo@gmail.com>
+
+export PHPRC=/etc/php/${version}xdbg/fpm
+export PHP_INI_SCAN_DIR=/etc/php/${version}xdbg/fpm/conf.d
+PATH=/sbin:/usr/sbin:/bin:/usr/bin
+DESC="PHP ${version} Xdebug FastCGI Process Manager"
+NAME=php-fpm${version}
+CONFFILE=/etc/php/${version}xdbg/fpm/php-fpm.conf
+DAEMON=/usr/sbin/\$NAME
+DAEMON_ARGS="--daemonize --fpm-config \$CONFFILE"
+CONF_PIDFILE=\$(sed -n 's/^pid[ =]*//p' \$CONFFILE)
+PIDFILE=\${CONF_PIDFILE:-/run/php/php${version}xdbg-fpm.pid}
+TIMEOUT=30
+SCRIPTNAME=/etc/init.d/\$NAME
+
+# Exit if the package is not installed
+[ -x "\$DAEMON" ] || exit 0
+
+# Read configuration variable file if it is present
+[ -r /etc/default/\$NAME ] && . /etc/default/\$NAME
+
+# Load the VERBOSE setting and other rcS variables
+. /lib/init/vars.sh
+
+# Define LSB log_* functions.
+# Depend on lsb-base (>= 3.0-6) to ensure that this file is present.
+. /lib/lsb/init-functions
+
+#
+# Function that starts the daemon/service
+#
+do_start()
+{
+    # Return
+    #   0 if daemon has been started
+    #   1 if daemon was already running
+    #   2 if daemon could not be started
+    start-stop-daemon --start --quiet --pidfile \$PIDFILE --exec \$DAEMON --test > /dev/null \
+        || return 1
+    start-stop-daemon --start --quiet --pidfile \$PIDFILE --exec \$DAEMON -- \
+        \$DAEMON_ARGS 2>/dev/null \
+        || return 2
+    # Add code here, if necessary, that waits for the process to be ready
+    # to handle requests from services started subsequently which depend
+    # on this one.  As a last resort, sleep for some time.
+}
+
+#
+# Function that stops the daemon/service
+#
+do_stop()
+{
+    # Return
+    #   0 if daemon has been stopped
+    #   1 if daemon was already stopped
+    #   2 if daemon could not be stopped
+    #   other if a failure occurred
+    start-stop-daemon --stop --quiet --retry=QUIT/\$TIMEOUT/TERM/5/KILL/5 --pidfile \$PIDFILE --name \$NAME
+    RETVAL="\$?"
+    [ "\$RETVAL" = 2 ] && return 2
+    # Wait for children to finish too if this is a daemon that forks
+    # and if the daemon is only ever run from this initscript.
+    # If the above conditions are not satisfied then add some other code
+    # that waits for the process to drop all resources that could be
+    # needed by services started subsequently.  A last resort is to
+    # sleep for some time.
+    start-stop-daemon --stop --quiet --oknodo --retry=0/30/TERM/5/KILL/5 --exec \$DAEMON
+    [ "\$?" = 2 ] && return 2
+    # Many daemons don't delete their pidfiles when they exit.
+    rm -f \$PIDFILE
+    return "\$RETVAL"
+}
+
+#
+# Function that sends a SIGHUP to the daemon/service
+#
+do_reload() {
+    #
+    # If the daemon can reload its configuration without
+    # restarting (for example, when it is sent a SIGHUP),
+    # then implement that here.
+    #
+    start-stop-daemon --stop --signal USR2 --quiet --pidfile \$PIDFILE --name \$NAME
+    return 0
+}
+
+case "\$1" in
+    start)
+    [ "\$VERBOSE" != no ] && log_daemon_msg "Starting \$DESC" "\$NAME"
+    systemd-tmpfiles --remove --create /usr/lib/tmpfiles.d/php${version}xdbg-fpm.conf
+    case "\$?" in
+        0)
+        do_start
+        case "\$?" in
+            0|1) [ "\$VERBOSE" != no ] && log_end_msg 0 ;;
+            2) [ "\$VERBOSE" != no ] && log_end_msg 1 ;;
+        esac
+        ;;
+        1) [ "\$VERBOSE" != no ] && log_end_msg 1 ;;
+    esac
+    ;;
+    stop)
+    [ "\$VERBOSE" != no ] && log_daemon_msg "Stopping \$DESC" "\$NAME"
+    do_stop
+    case "\$?" in
+        0|1) [ "\$VERBOSE" != no ] && log_end_msg 0 ;;
+        2) [ "\$VERBOSE" != no ] && log_end_msg 1 ;;
+    esac
+    ;;
+    status)
+        status_of_proc "\$DAEMON" "\$NAME" && exit 0 || exit \$?
+        ;;
+    reload|force-reload)
+    log_daemon_msg "Reloading \$DESC" "\$NAME"
+    do_reload
+    log_end_msg \$?
+    ;;
+    reopen-logs)
+    log_daemon_msg "Reopening \$DESC logs" \$NAME
+    if start-stop-daemon --stop --signal USR1 --oknodo --quiet \
+        --pidfile \$PIDFILE --exec \$DAEMON
+    then
+        log_end_msg 0
+    else
+        log_end_msg 1
+    fi
+    ;;
+    restart)
+    log_daemon_msg "Restarting \$DESC" "\$NAME"
+    do_stop
+    case "\$?" in
+      0|1)
+        do_start
+        case "\$?" in
+            0) log_end_msg 0 ;;
+            1) log_end_msg 1 ;; # Old process is still running
+            *) log_end_msg 1 ;; # Failed to start
+        esac
+        ;;
+      *)
+        # Failed to stop
+        log_end_msg 1
+        ;;
+    esac
+    ;;
+    *)
+    echo "Usage: \$SCRIPTNAME {start|stop|status|restart|reload|force-reload}" >&2
+    exit 1
+    ;;
+esac
+
+:
+EOF
+chmod +x /etc/init.d/php${version}xdbg-fpm
+
+    ## Write PHP template file
+    echo "## Write the template file"
+    cat <<EOF > /usr/local/hestia/data/templates/web/php-fpm/PHP-${version_underscore}xdbg.tpl
+[Unit]
+Description=The PHP ${version} Xdebug FastCGI Process Manager
+Documentation=man:php-fpm${version}(8)
+After=network.target
+
+[Service]
+Type=notify
+Environment=PHPRC=/etc/php/${version}xdbg/fpm
+Environment=PHP_INI_SCAN_DIR=/etc/php/${version}xdbg/fpm/conf.d
+ExecStart=/usr/sbin/php-fpm${version} --nodaemonize --fpm-config /etc/php/${version}xdbg/fpm/php-fpm.conf
+ExecStartPost=-/usr/lib/php/php-fpm-socket-helper install /run/php/php-fpm.sock /etc/php/${version}xdbg/fpm/pool.d/www.conf ${version_no_dot}
+ExecStopPost=-/usr/lib/php/php-fpm-socket-helper remove /run/php/php-fpm.sock /etc/php/${version}xdbg/fpm/pool.d/www.conf ${version_no_dot}
+ExecReload=/bin/kill -USR2 \$MAINPID
+
+[Install]
+WantedBy=multi-user.target
+
+EOF
+
+    ## Enable and start the systemd service
+    echo "## Enable and start the systemd service for PHP ${version}"
+    systemctl enable php${version}xdbg-fpm
+    systemctl start php${version}xdbg-fpm
+
+    ## Register and start the init.d service
+    echo "## Register and start the init.d service for PHP ${version}"
+    update-rc.d php${version}xdbg-fpm defaults
+    service php${version}xdbg-fpm start
+
+}
+
+# Invoke the function for each PHP version
+install_xdebug 7.4
+install_xdebug 8.0
+install_xdebug 8.1
+install_xdebug 8.2
+install_xdebug 8.3
 
 ############################################
 # Install Open VSCode Server
 ############################################
+
+## Exit if /etc/php.pre-xdebug exists
+if [ -d "/opt/vscode" ]; then
+    echo "## VSCode is already installed"
+    exit 0
+fi
+
+## Dynamically get the latest version of Open VSCode Server
+get_latest_version() {
+    curl --silent "https://api.github.com/repos/gitpod-io/openvscode-server/releases/latest" | jq -r .tag_name
+}
 
 cd /tmp || exit
 architecture=""
@@ -86,19 +360,62 @@ case $(uname -m) in
     arm*)    dpkg --print-architecture | grep -q "arm64" && architecture="linux-arm64" || architecture="linux-arm" ;;
     aarch64) architecture="linux-arm64" ;;
 esac
-export OPENVSCODE_SERVER_VERSION=1.91.1
-export OPENVSCODE_ARCH=$architecture
-wget https://github.com/gitpod-io/openvscode-server/releases/download/openvscode-server-v${OPENVSCODE_SERVER_VERSION}/openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
-tar -xzf openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
-mv openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH} /opt/vscode
-rm openvscode-server-v${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
+OPENVSCODE_SERVER_VERSION=$(get_latest_version)
+OPENVSCODE_ARCH=$architecture
+wget https://github.com/gitpod-io/openvscode-server/releases/download/${OPENVSCODE_SERVER_VERSION}/${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
+tar -xzf ${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
+mv ${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH} /opt/vscode
+rm ${OPENVSCODE_SERVER_VERSION}-${OPENVSCODE_ARCH}.tar.gz
 
-# Install templates
-cd /usr/local/hestia/plugins/vscode || exit
-rsync -r ./src/usr/local/hestia/ /usr/local/hestia/
+# Write the vscode.config.js file
+cat <<EOF > /opt/vscode/vscode.config.js
+/**
+ * Control Open VSCode Server via PM2
+ */
+module.exports = {
+    apps: (function() {
 
-# Install pm2 controll of Open VSCode Server
-rsync -r ./src/opt/vscode/ /opt/vscode/
+        // Get active user, hostname, and port
+        const {execSync} = require('child_process');
+        const fs = require('fs');
+        let user = execSync('/bin/bash -c "whoami"').toString().trim();
+        let hostname = execSync('/bin/bash -c "hostname -f"').toString().trim();
+        hostname = hostname.split('.').slice(-2).join('.');
+        let port = 0;
+        let pfile = '/usr/local/hestia/data/hcpp/ports/' + user + '/vscode-' + user + '.' + hostname + '.ports';
+        let ports = fs.readFileSync(pfile, {encoding:'utf8', flag:'r'});
+        ports = ports.split(/\\r?\\n/);
+        for( let i = 0; i < ports.length; i++) {
+            if (ports[i].indexOf('vscode_port') > -1) {
+                port = ports[i];
+                break;
+            }
+        }
+        port = parseInt(port.trim().split(' ').pop());
+        
+        // Create PM2 compatible app details
+        let details = {};
+        details.name = "vscode-" + user + '.' + hostname;
+        details.interpreter = "/opt/vscode/node";
+        details.script = "/opt/vscode/out/server-main.js";
+        details.args = "--port " + port;
+
+        // Implement restart policy
+        details.watch = ["/home/" + user + "/.openvscode-server/data/token"];
+        details.ignore_watch = [];
+        details.watch_delay = 5000;
+        details.restart_delay = 5000;
+        return [details];
+    })()
+}
+EOF
+
+############################################
+# Install Certbot if no dev-pw plugin
+############################################
+if [ ! -d "/usr/local/hestia/plugins/dev-pw" ]; then
+    apt-get install -qq certbot
+fi
 
 # Notify installation has finished
 /usr/local/hestia/bin/v-add-user-notification admin "VSCode" "<span style=\"color:#0092FF;\"><i class=\"fas fa-file-code\"></i></span> VSCode plugin has finished installing."
