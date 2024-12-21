@@ -49,6 +49,11 @@ if ( ! class_exists( 'VSCode' ) ) {
             rename( $ssl_conf, $ssl_sav );
             rename( $conf, $sav );
 
+            // Turn off force SSL
+            $force_ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.conf";
+            $force_ssl_sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.sav";
+            rename( $force_ssl_conf, $force_ssl_sav );
+
             // Create empty nginx.ssl.conf file
             touch( $ssl_conf );
             
@@ -69,9 +74,10 @@ if ( ! class_exists( 'VSCode' ) ) {
                 $content
             ) );
 
-            // Restart nginx to serve up the le-webroot folder
-            shell_exec( 'service nginx restart' );
-
+            // Restart nginx to serve le-webroot folder
+            $cmd = '/usr/sbin/service nginx restart 2>&1';
+            $hcpp->log( 'Restart nginx to serve le-webroot: ' . shell_exec($cmd) );
+            
             // Use certbot to generate the LE certificate
             $cmd = "certbot certonly --webroot -w /home/$user/conf/web/vscode-$user.$domain/le-webroot -d vscode-$user.$domain --email $email --agree-tos --non-interactive";
             $cmd = $hcpp->do_action( 'vscode_build_le_cert', $cmd );
@@ -81,6 +87,7 @@ if ( ! class_exists( 'VSCode' ) ) {
             } else {
 
                 // Link to the LE certificate and key
+                $hcpp->log("Successfully generated LE certificate: " . implode("\n", $output));                sudo systemctl start nginx
                 $cert_file = "/etc/letsencrypt/live/vscode-$user.$domain/fullchain.pem";
                 $key_file = "/etc/letsencrypt/live/vscode-$user.$domain/privkey.pem";
                 $cert_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
@@ -89,11 +96,17 @@ if ( ! class_exists( 'VSCode' ) ) {
                 @symlink( $key_file, $key_link );
             }
 
-            // Restore the original nginx.conf and nginx.ssl.conf files
+            // Restore the original nginx.conf and nginx.ssl.conf and force_ssl files
             if ( file_exists( $ssl_conf ) ) unlink( $ssl_conf );
             rename( $ssl_sav, $ssl_conf );
             if ( file_exists( $conf ) ) unlink( $conf );
             rename( $sav, $conf );
+            if ( file_exists( $force_ssl_conf ) ) unlink( $force_ssl_conf );
+            rename( $force_ssl_sav, $force_ssl_conf );
+
+            // Restart nginx to serve vscode- folder
+            $cmd = '/usr/sbin/service nginx restart 2>&1';
+            $hcpp->log( 'Restart nginx to serve -vscode: ' . shell_exec($cmd) );
         }
 
         /**
