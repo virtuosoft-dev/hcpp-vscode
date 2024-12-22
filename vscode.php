@@ -87,7 +87,7 @@ if ( ! class_exists( 'VSCode' ) ) {
             } else {
 
                 // Link to the LE certificate and key
-                $hcpp->log("Successfully generated LE certificate: " . implode("\n", $output));                sudo systemctl start nginx
+                $hcpp->log("Successfully generated LE certificate: " . implode("\n", $output));
                 $cert_file = "/etc/letsencrypt/live/vscode-$user.$domain/fullchain.pem";
                 $key_file = "/etc/letsencrypt/live/vscode-$user.$domain/privkey.pem";
                 $cert_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
