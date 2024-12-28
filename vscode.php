@@ -20,7 +20,7 @@ if ( ! class_exists( 'VSCode' ) ) {
             global $hcpp;
             $domain = $this->get_base_domain();
 
-            // Check if the LE certificate already exists.
+            // Check time of existing LE cert. file.
             $cert_file = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
             if ( file_exists( $cert_file ) ) {
                     // Get the file modification time
@@ -36,28 +36,36 @@ if ( ! class_exists( 'VSCode' ) ) {
                     }
                     unlink( $cert_file );
             }
+
+            // Check if the LE cert. file exists.
+            if ( file_exists( $cert_file ) ) {
+                $hcpp->log( "LE certificate already exists for vscode-$user.$domain" );
+                return;
+            }
+
             $ip = array_key_first( $hcpp->run( "list-user-ips $user json" ) );
 
             // Get the admin user email address
             $email = trim( $hcpp->run( 'list-user admin json' )['admin']['CONTACT'] );
 
-            // Swap out nginx.conf and nginx.ssl.conf files to use the LE webroot
-            $ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf";
-            $conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.conf";
-            $ssl_sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.sav";
-            $sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.sav";
-            rename( $ssl_conf, $ssl_sav );
-            rename( $conf, $sav );
+            // Clean existing conf files and links
+            $hcpp->log( "Missing certificate for vscode-$user.$domain; skipping nginx configuration " );
+            $files = [
+                "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf",
+                "/home/$user/conf/web/vscode-$user.$domain/nginx.conf",
+                "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.conf",
+                "/etc/nginx/conf.d/domains/vscode-$user.$domain.conf",
+                "/etc/nginx/conf.d/domains/vscode-$user.$domain.ssl.conf"
+            ];
 
-            // Turn off force SSL
-            $force_ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.conf";
-            $force_ssl_sav = "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.sav";
-            rename( $force_ssl_conf, $force_ssl_sav );
+            foreach( $files as $file ) {
+                if ( file_exists( $file ) ) {
+                    unlink( $file );
+                }
+            }
 
-            // Create empty nginx.ssl.conf file
-            touch( $ssl_conf );
-            
             // Create nginx.conf that serves up le-webroot folder
+            $conf = $files[1];
             @mkdir( "/home/$user/conf/web/vscode-$user.$domain/le-webroot", 0755, true );
             @mkdir( "/home/$user/conf/web/vscode-$user.$domain/ssl", 0755, true );
             $content = 'server {
@@ -79,34 +87,36 @@ if ( ! class_exists( 'VSCode' ) ) {
             $hcpp->log( 'Restart nginx to serve le-webroot: ' . shell_exec($cmd) );
             
             // Use certbot to generate the LE certificate
-            $cmd = "certbot certonly --webroot -w /home/$user/conf/web/vscode-$user.$domain/le-webroot -d vscode-$user.$domain --email $email --agree-tos --non-interactive";
-            $cmd = $hcpp->do_action( 'vscode_build_le_cert', $cmd );
-            exec( $cmd, $output, $return_var );
-            if ( $return_var !== 0 ) {
-                $hcpp->log("Failed to generate LE certificate: " . implode("\n", $output));
-            } else {
+            $cmd = "certbot certonly --webroot -w /home/$user/conf/web/vscode-$user.$domain/le-webroot -d vscode-$user.$domain --email $email --agree-tos --non-interactive 2>&1";
+            $cmd = $hcpp->do_action( 'vscode_generate_le_cert', $cmd );
+            $output = shell_exec( $cmd );
+            $hcpp->log( "Generate LE certificate: " . $output );
+
+            $cert_file = "/etc/letsencrypt/live/vscode-$user.$domain/fullchain.pem";
+            $key_file = "/etc/letsencrypt/live/vscode-$user.$domain/privkey.pem";
+            $cert_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
+            $key_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.key";
+
+            if ( file_exists( $cert_file ) ) {
 
                 // Link to the LE certificate and key
-                $hcpp->log("Successfully generated LE certificate: " . implode("\n", $output));
-                $cert_file = "/etc/letsencrypt/live/vscode-$user.$domain/fullchain.pem";
-                $key_file = "/etc/letsencrypt/live/vscode-$user.$domain/privkey.pem";
-                $cert_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
-                $key_link = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.key";
+                $hcpp->log("Successfully generated LE certificate");
                 @symlink( $cert_file, $cert_link );
                 @symlink( $key_file, $key_link );
+            }else{
+                $hcpp->log("Failed to generate LE certificate: ");
+
+                // Cleanup files
+                $files = [ 
+                    $cert_link,
+                    $key_link
+                ];
+                foreach( $files as $file ) {
+                    if ( file_exists( $file ) ) {
+                        unlink( $file );
+                    }
+                }
             }
-
-            // Restore the original nginx.conf and nginx.ssl.conf and force_ssl files
-            if ( file_exists( $ssl_conf ) ) unlink( $ssl_conf );
-            rename( $ssl_sav, $ssl_conf );
-            if ( file_exists( $conf ) ) unlink( $conf );
-            rename( $sav, $conf );
-            if ( file_exists( $force_ssl_conf ) ) unlink( $force_ssl_conf );
-            rename( $force_ssl_sav, $force_ssl_conf );
-
-            // Restart nginx to serve vscode- folder
-            $cmd = '/usr/sbin/service nginx restart 2>&1';
-            $hcpp->log( 'Restart nginx to serve -vscode: ' . shell_exec($cmd) );
         }
 
         /**
@@ -323,30 +333,54 @@ if ( ! class_exists( 'VSCode' ) ) {
          */
         public function startup( $user ) {
             global $hcpp;
+            $domain = $this->get_base_domain();
+            $cert_file = "/home/$user/conf/web/vscode-$user.$domain/ssl/vscode-$user.$domain.pem";
 
-            // Check for existing instance of VSCode's "server-main.js" for the user.
-            $cmd = "ps axo user:20,pid,args | grep \"/opt/vscode/node /opt/vscode/out/server-main.js\" | grep $user | grep -v grep | awk '{print $2}'";
-            $pid = trim( shell_exec( $cmd ) );
-            
-            // Start the vscode server for the given user if not already running.
-            if ( $pid ) {
-                $hcpp->log( "VSCode server $pid, already running for $user" );
-                touch( "/home/$user/.openvscode-server/data/token" ); // Keep idle server alive
+            // Generate website cert if it doesn't exist.
+            if ( !file_exists( $cert_file) ) {
+
+                // Generate website cert if it doesn't exist for Devstia Personal Web edition.
+                if ( property_exists( $hcpp, 'dev_pw' ) ) {
+
+                    // Always regenerate the cert to ensure it's up to date.
+                    $hcpp->dev_pw->generate_website_cert( $user, ["vscode-$user.$domain"] );
+                }else{
+
+                    // Support LE SSL certs for non-Devstia Personal Web edition.
+                    $this->build_le_cert( $user );
+
+                }
+            }
+
+            // Skip/remove nginx configuration files if cert is missing.
+            if ( !file_exists( $cert_file ) ) {
+                $hcpp->log( "Missing certificate for vscode-$user.$domain; skipping nginx configuration " );
+                $files = [
+                    "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf",
+                    "/home/$user/conf/web/vscode-$user.$domain/nginx.conf",
+                    "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.conf",
+                    "/etc/nginx/conf.d/domains/vscode-$user.$domain.conf",
+                    "/etc/nginx/conf.d/domains/vscode-$user.$domain.ssl.conf"
+                ];
+
+                foreach( $files as $file ) {
+                    if ( file_exists( $file ) ) {
+                        unlink( $file );
+                    }
+                }
                 return;
             }
-            $hcpp->log( "Setting up VSCode for $user" );
-            $domain = $this->get_base_domain();
+
+            // Create the configuration folder.
+            if ( ! is_dir( "/home/$user/conf/web/vscode-$user.$domain" ) ) {
+                mkdir( "/home/$user/conf/web/vscode-$user.$domain" );
+            }
 
             // Get user account first IP address.
             $ip = array_key_first( $hcpp->run( "list-user-ips $user json" ) );
 
             // Get a port for the VSCode service.
             $port = $hcpp->allocate_port( 'vscode', $user );
-
-            // Create the configuration folder.
-            if ( ! is_dir( "/home/$user/conf/web/vscode-$user.$domain" ) ) {
-                mkdir( "/home/$user/conf/web/vscode-$user.$domain" );
-            }
 
             // Create the nginx.conf file.
             $conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.conf";
@@ -358,6 +392,12 @@ if ( ! class_exists( 'VSCode' ) ) {
             );
             file_put_contents( $conf, $content );
 
+            // Create the nginx.conf symbolic link.
+            $link = "/etc/nginx/conf.d/domains/vscode-$user.$domain.conf";
+            if ( ! is_link( $link ) ) {
+                symlink( $conf, $link );
+            }
+
             // Create the nginx.ssl.conf file.
             $ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.ssl.conf";
             $content = file_get_contents( __DIR__ . '/conf-web/nginx.ssl.conf' );
@@ -368,48 +408,46 @@ if ( ! class_exists( 'VSCode' ) ) {
             );
             file_put_contents( $ssl_conf, $content );
 
-            // Generate website cert if it doesn't exist for Devstia Personal Web edition.
-            if ( property_exists( $hcpp, 'dev_pw' ) ) {
-
-                // Always regenerate the cert to ensure it's up to date.
-                $hcpp->dev_pw->generate_website_cert( $user, ["vscode-$user.$domain"] );
-            }else{
-
-                // Force SSL on non-Devstia Personal Web edition.
-                $force_ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.conf";
-                $content = "return 301 https://\$host\$request_uri;";
-                file_put_contents( $force_ssl_conf, $content );
-
-                // Support LE SSL certs for non-Devstia Personal Web edition.
-                $this->build_le_cert( $user );
-            }
-
-            // Create the nginx.conf configuration symbolic links.
-            $link = "/etc/nginx/conf.d/domains/vscode-$user.$domain.conf";
-            if ( ! is_link( $link ) ) {
-                symlink( $conf, $link );
-            }
-
-            // Create the nginx.ssl.conf configuration symbolic links.
+            // Create the nginx.ssl.conf symbolic link.
             $link = "/etc/nginx/conf.d/domains/vscode-$user.$domain.ssl.conf";
             if ( ! is_link( $link ) ) {
                 symlink( $ssl_conf, $link );
             }
 
-            // Create VSCode token if it doesn't already exist.
-            $this->update_token( $user );
+            // Create the force SSL conf file on non-Devstia Personal Web edition.
+            if ( !property_exists( $hcpp, 'dev_pw' ) ) {
+                $force_ssl_conf = "/home/$user/conf/web/vscode-$user.$domain/nginx.forcessl.conf";
+                $content = "return 301 https://\$host\$request_uri;";
+                file_put_contents( $force_ssl_conf, $content );
+            }
 
-            // Start the VSCode service manually (outside of PM2).
-            $cmd = 'runuser -l ' . $user . ' -c "';
-            $cmd .= "(/opt/vscode/node /opt/vscode/out/server-main.js --port $port) > /dev/null 2>&1 &";
-            $cmd .= '"';
-            $cmd = $hcpp->do_action( 'vscode_nodejs_cmd', $cmd );
-            shell_exec( $cmd );
+            // Check for existing instance of VSCode's "server-main.js" for the user.
+            $cmd = "ps axo user:20,pid,args | grep \"/opt/vscode/node /opt/vscode/out/server-main.js\" | grep $user | grep -v grep | awk '{print $2}'";
+            $pid = trim( shell_exec( $cmd ) );
+            
+            // Start the vscode server for the given user if not already running.
+            if ( $pid ) {
+                $hcpp->log( "VSCode server $pid, already running for $user" );
+                touch( "/home/$user/.openvscode-server/data/token" ); // Keep idle server alive
+            }else{
+                $hcpp->log( "Setting up VSCode for $user" );
 
-            // Reload nginx
-            $cmd = '(service nginx restart) > /dev/null 2>&1 &';
-            $cmd = $hcpp->do_action( 'vscode_nginx_restart', $cmd );
-            shell_exec( $cmd );
+                // Create VSCode token if it doesn't already exist.
+                $this->update_token( $user );
+
+                // Start the VSCode service manually (outside of PM2).
+                $cmd = 'runuser -l ' . $user . ' -c "';
+                $cmd .= "(/opt/vscode/node /opt/vscode/out/server-main.js --port $port) > /dev/null 2>&1 &";
+                $cmd .= '"';
+                $cmd = $hcpp->do_action( 'vscode_nodejs_cmd', $cmd );
+                shell_exec( $cmd );
+
+                // Reload nginx
+                $cmd = '(service nginx restart) > /dev/null 2>&1 &';
+                $cmd = $hcpp->do_action( 'vscode_nginx_restart', $cmd );
+                shell_exec( $cmd );
+            }
+
         }
 
         /**
