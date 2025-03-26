@@ -1,3 +1,5 @@
+NOTE: This plugin is NOT compatible with pluginable 2.X; an update is required and pending.
+
 # hcpp-vscode
 A plugin for [hestiacp-pluginable](https://github.com/virtuosoft-dev/hestiacp-pluginable) that furnishes multi-tenant Open Visual Studio Code Servers preconfigured for step-by-step debugging (Xdebug) for users and their hosted domains. 
 
